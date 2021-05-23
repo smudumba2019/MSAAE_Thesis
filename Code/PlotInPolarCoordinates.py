@@ -19,7 +19,7 @@ def PlotInPolarCoordinates(distance, direction, teta, r, arrowprops=None):
     angles = np.multiply(direction, math.pi/180)
     radii = distance
 
-    fig, ax = plt.subplots(subplot_kw=dict(polar=True))
+    fig, ax = plt.subplots(subplot_kw=dict(polar=True), dpi = 300, figsize=(8,5))
     kw = dict(arrowstyle="->", color='k')
     if arrowprops:
         kw.update(arrowprops)

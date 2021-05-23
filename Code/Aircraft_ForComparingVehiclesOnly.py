@@ -103,10 +103,7 @@ class Aircraft:
                     Y_turn.append(y)
                     TurnDistance.append(math.sqrt(x ** 2 + y ** 2))
                     if x >= 0 and y >= 0:
-                        if y == 0:
-                            ETA.append(math.pi/2)
-                        else:
-                            ETA.append(math.atan(x/y))
+                        ETA.append(math.atan(x/y))
                     elif (x > 0 and y < 0) or (x < 0 and y < 0):
                         ETA.append(math.pi + math.atan(x/y))
                     elif (x < 0 and y > 0):
@@ -145,11 +142,11 @@ class Aircraft:
             ETA_LHS = self.Reverse(ETA_LHS)
             ETA_final, NullArray = self.Combine(ETA_RHS, [1], ETA_LHS, [1])
         
-        # self.PlotReachabilityFootprint(X, Y)
-        # self.PolarPlotReachabilityFootprint(ETA_final, np.multiply(1/1000,Distance))
+        self.PlotReachabilityFootprint(X, Y)
+        self.PolarPlotReachabilityFootprint(ETA_final, np.multiply(1/1000,Distance))
         
         # print(Distance)
-        return (X, Y, ETA_final, np.multiply(1/1000,Distance))
+        return (X, Y, ETA_final, np.multiply(0.621371/1000,Distance))
         
     def FindTurnRadius(self, speed, mu):
         r = speed ** 2 / (self.g * math.tan(mu)) # radius of the turn
@@ -194,12 +191,13 @@ class Aircraft:
         fig, ax = plt.subplots(figsize=(8,5), dpi=300)
         ax.plot(X, Y)
         plt.show()
+        
     
     def PolarPlotReachabilityFootprint(self, teta, r):
         fig, ax = plt.subplots(subplot_kw=dict(polar=True), dpi=300)
         ax.plot(teta, r)
         ax.set_theta_direction(-1) # CW direction 
-        # ax.set_theta_zero_location('N')
+        ax.set_theta_zero_location('N')
         plt.show() # comment this line when comparing all vehicles; uncomment when running for big code
     
     def radians2degrees(self,angle):
@@ -217,23 +215,39 @@ class Aircraft:
         
 
         
-# JobyS4 = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 254.4, S=10.7*1.7)
-# JobyS4.Characteristics()
-# JobyS4.ReachableGroundFootprint(100,35,0)
+JobyS4 = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 254.4, S=10.7*1.7)
+JobyS4.Characteristics()
+X_JobyS4, Y_JobyS4, Radial_JobyS4, Distance_JobyS4 = JobyS4.ReachableGroundFootprint(1500,35,0)
 
-# Lilium7 = Aircraft("Joby", 7, 186, 186, 16.3, 60, 1700, 187.8, S=10.7*1.7)
-# Lilium7.Characteristics()
-# Lilium7.ReachableGroundFootprint(1500,35,0)
+Lilium7 = Aircraft("Joby", 7, 175, 124, 16.3, 53, 3175, 305, S=11*1.1)
+Lilium7.Characteristics()
+X_Lilium7, Y_Lilium7, Radial_Lilium7, Distance_Lilium7 = Lilium7.ReachableGroundFootprint(1500,35,0)
 
-# Archer5 = Aircraft("Joby", 5, 175, 60, 11.3, 24, 3175, 160, S=10.7*1.7)
-# Archer5.Characteristics()
-# Archer5.ReachableGroundFootprint(1500,35,0)
+Archer5 = Aircraft("Joby", 5, 150, 60, 11.3, 24, 3175, 160, S=13*1.1)
+Archer5.Characteristics()
+X_Archer5, Y_Archer5, Radial_Archer5, Distance_Archer5 = Archer5.ReachableGroundFootprint(1500,35,0)
 
-# Volocopter1 = Aircraft("Joby", 1, 56, 22, 2.5, 19, 900, 83.3, S=10.7*1.7)
-# Volocopter1.Characteristics()
-# Volocopter1.ReachableGroundFootprint(1500,35,0)
+Volocopter1 = Aircraft("Joby", 1, 56, 22, 2.5, 19, 900, 83.3, S=1**2)
+Volocopter1.Characteristics()
+X_Volocopter1, Y_Volocopter1, Radial_Volocopter1, Distance_Volocopter1 = Volocopter1.ReachableGroundFootprint(1500,35,0)
 
-# EHang1 = Aircraft("Joby", 1, 62, 22, 1.5, 21, 1322, 206.2, S=10.7*1.7)
-# EHang1.Characteristics()
-# EHang1.ReachableGroundFootprint(1500,35,0)
-# plt.show()
+EHang1 = Aircraft("Joby", 1, 62, 22, 1.5, 21, 1322, 206.2, S=1**2)
+EHang1.Characteristics()
+X_EHang1, Y_EHang1, Radial_EHang1, Distance_EHang1 = EHang1.ReachableGroundFootprint(1500,35,0)
+
+# PLOT ALL ON THE SAME POLAR PLOT
+linewidth=2
+fig, ax = plt.subplots(subplot_kw=dict(polar=True), dpi=300, figsize=(6,6))
+ax.plot(Radial_JobyS4, Distance_JobyS4, 'b', linewidth=linewidth, label='Joby-like S4')
+ax.plot(Radial_Lilium7, Distance_Lilium7, 'r', linewidth=linewidth,label='Lilium-like S7')
+ax.plot(Radial_Archer5, Distance_Archer5, 'g', linewidth=linewidth,label='Archer-like S5')
+ax.plot(Radial_Volocopter1, Distance_Volocopter1, 'm', linewidth=linewidth,label='Volocopter-like S1')
+ax.plot(Radial_EHang1, Distance_EHang1, 'k', linewidth=linewidth,label='EHang-like S1')
+ax.set_theta_direction(-1) # CW direction 
+ax.set_theta_zero_location('N')
+ax.set_title("Comparison of Reachable Ground Footprint (miles) \n of eVTOL Vehicles under Gliding Conditions")
+ax.legend(loc='lower left',bbox_to_anchor=(1, 0.6))
+ax.set_rticks([0,1, 2,3, 4,5])
+plt.tight_layout()
+plt.savefig('C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/ComparisonOfReachableFootprint.png', dpi=300)
+plt.show()

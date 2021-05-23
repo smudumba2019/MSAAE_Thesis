@@ -17,6 +17,8 @@ import numpy as np
 from bokeh.plotting import figure, show, output_notebook, output_file, save
 from bokeh.tile_providers import CARTODBPOSITRON, ESRI_IMAGERY, OSM, STAMEN_TERRAIN, STAMEN_TERRAIN_RETINA
 from bokeh.tile_providers import get_provider, Vendors 
+from bokeh.io import export_png
+
 import matplotlib.pyplot as plt
 from LoadExistingUAMaerodromeInfrastructure import *
 from FlightProfile import *
@@ -104,39 +106,6 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         
         DistanceLinspace = np.linspace(0,geodesicDistance,sampSize)
         
-        """
-        Delete later if not needed        
-        """
-        # AltitudeAtThatDistance = []
-        # for temp in DistanceLinspace:
-        #     FP1 = FlightProfile(1500, self.tripDistance)
-        #     Xrange, Yalt = FP1.GivenRangeOutputAltitude(temp)
-        #     AltitudeAtThatDistance.append(Yalt)
-        #     X, Y = self.SimplifiedReachabilityFootprint(Yalt/0.3048)
-        #     X_new = []
-        #     Y_new = []
-        #     for i in range(len(X)):
-        #         X_new.append(X[i]*np.cos(teta) - Y[i]*np.sin(teta))
-        #         Y_new.append(X[i]*np.sin(teta) + Y[i]*np.cos(teta))
-        #     for j in range(len(Lat)):
-        #         LAT_DEG = []
-        #         LON_DEG = []
-        #         DIST = []
-        #         for i in range(len(X)):
-        #             lat_deg, lon_deg = self.Mercator2Degrees((Lat[j]+Y_new[i]),(Lon[j]-X_new[i]))
-        #             #print(Lat_deg[j], Lon_deg[j], lat_deg, lon_deg)
-        #             DST = self.GeodesicDistance(Lat_deg[j], Lon_deg[j], lat_deg, lon_deg)
-        #             LAT_DEG.append(lat_deg)
-        #             LON_DEG.append(lon_deg)
-        #             DIST.append(DST)
-                                
-        #         if j % 100 == 0:
-        #             self.p.circle(Lat[j], Lon[j], color = 'yellow', alpha = 1, size = 3)
-        #             #self.p.ellipse(Lat[j],Lon[j], alpha = 0.3, width=width, height=width, color="white")
-        #             self.p.patch(Lat[j]*np.ones(len(Y))+Y_new, Lon[j]*np.ones(len(X))-X_new, alpha = 0.3, color="white")
-            
-        # plt.show()
-        #################################################
         for j in range(len(Lat)):
             LAT_DEG = []
             LON_DEG = []
@@ -149,11 +118,12 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
                 LON_DEG.append(lon_deg)
                 DIST.append(DST)
                             
-            if j % 100 == 10:
+            if j % 100 == 10000:
                 self.p.circle(Lat[j], Lon[j], color = 'yellow', alpha = 1, size = 3)
                 #self.p.ellipse(Lat[j],Lon[j], alpha = 0.3, width=width, height=width, color="white")
                 self.p.patch(Lat[j]*np.ones(len(Y))+Y_new, Lon[j]*np.ones(len(X))-X_new, alpha = 0.3, color="white")
-            
+                if False:
+                    self.SaveMap(Lon, Lat, j, Lat[j], Lon[j], Lat[j]*np.ones(len(Y))+Y_new, Lon[j]*np.ones(len(X))-X_new )
         plt.show()
             
         # Here, find the closest contingency UAM aerodrome from a vehicle's current position
@@ -269,10 +239,11 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
             # meaning landing site is outside the reachable footprint
             #print(Distance2ClosestContingencySite[i], distS)
             if Distance2ClosestContingencySite[i] >= distanceOfClosestFootprintRadial:
-                counter += 1
+                if Labeling[i] == 0 or Labeling[i] == 2:
+                    counter += 1
                
                 
-        print(counter)           
+        # print(counter)           
         print(f'Percentage of trip that is outside the distance requirement: {100*counter/sampSize} %')
         self.CLAP = 100*counter/sampSize
         
@@ -309,7 +280,20 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         output_file("test.html")
         save(self.p)
         plt.show()
+    
         
+    def SaveMap(self, Lon, Lat, imgNum, Latj, Lonj, PatchLatj, PatchLonj):
+        # output_notebook()
+        q = self.MapperInfrastructure()
+        q.line(Lat, Lon, color = 'white', line_width = 2)
+        q.circle(Latj, Lonj, color = 'yellow', alpha = 1, size = 3)
+        q.patch(PatchLatj, PatchLonj, alpha = 0.3, color="white")
+        number_str = str(imgNum)
+        # output_file("C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png")
+        filename="C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png"
+        export_png(q, filename=filename )
+
+    
     def GeodesicDistance(self, lat1, long1, lat2, long2):
         # Convert latitude and longitude to
         # spherical coordinates in radians.

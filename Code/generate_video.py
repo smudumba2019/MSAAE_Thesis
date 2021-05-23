@@ -7,10 +7,10 @@ Created on Sat May 15 20:49:25 2021
 
 import cv2
 import os
-def generate_video():
-    image_folder = "C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass\\" # make sure to use your folder
-    video_name = 'mygeneratedvideo.avi'
-    os.chdir("C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass")
+def generate_video(image_folder, video_name, speed):
+    # image_folder = "C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass\\" # make sure to use your folder
+    # video_name = 'mygeneratedvideo.avi'
+    # os.chdir("C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass")
       
     images = [img for img in os.listdir(image_folder) if img.endswith("png")]
      
@@ -24,7 +24,7 @@ def generate_video():
     # the width, height of first image
     height, width, layers = frame.shape  
   
-    video = cv2.VideoWriter(video_name, 0, 15, (width, height)) 
+    video = cv2.VideoWriter(video_name, 0, speed, (width, height)) 
   
     # Appending the images to the video one by one
     for image in images: 
