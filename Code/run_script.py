@@ -16,7 +16,7 @@ import os
 import math
 import matplotlib.pyplot as plt
 
-PlotMultipleTrips()
+# PlotMultipleTrips()
 main()
 
 """

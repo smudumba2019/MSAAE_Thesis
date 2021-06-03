@@ -14,25 +14,25 @@ import numpy as np
 def main():
     # This is the main code that creates instances
     Chicago = TripMapper("Chicago","Satellite") # options for 2nd input either "Satellite" or "Map"
-    DEP = [7, 9, 13, 19]
-    ARR = [5, 6, 7, 8, 11]
+    DEP = [7, 9, 13, 19] # indices for departure aerodromes
+    ARR = [5, 6, 7, 8, 11] # indices for arrival aerodromes
     idxDep = DEP[0]
-    idxArr = ARR[4]
+    idxArr = ARR[3]
     # Specify trip aerodrome departure and arrival 
     #for dep in range(1,3):
     #    for arr in range(4,9):
     #        Chicago.DrawGeodesicTrip(dep,arr, X[0], Y[0])
-    altitude = np.linspace(1500,5000,20)
+    altitude = np.linspace(3750,5000,1) # in ft.
     CLAP = []
 
     Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
     Joby.Characteristics()
 
     for h in altitude:
-        
-        TripD = Chicago.TripDistance(idxDep,idxArr)        
-        FP1 = FlightProfile(h, TripD)
-        # FP1.PlotMissionProfile()
+        fig, ax = plt.subplots(figsize = (8, 5),dpi=300)
+        TripD = Chicago.TripDistance(idxDep,idxArr)  # in miles      
+        FP1 = FlightProfile(Joby, h, TripD)
+        FP1.PlotMissionProfile(fig, ax, "red","Cruise Altitude Floor: ")
         # # FP1_time = FP1.FlightTime()
         # dx, dh = FP1.GivenRangeOutputAltitude()
         
@@ -43,7 +43,7 @@ def main():
         FootprintDistance = FootprintDistance * 0.621371 # km to miles
         distance, direction, aerodromeType = Chicago.DrawGeodesicTrip(idxDep,idxArr, X, Y)
         
-        TripDistanceArray = np.linspace(0,TripD,len(distance)-1)
+        TripDistanceArray = np.linspace(0,TripD,len(distance)-1)# in miles
 
         if len(altitude) == 1:
             """
@@ -62,17 +62,18 @@ def main():
                 
                 # Account for takeoff, climb, descend, land changes in altitude footprint
                 if TripDistanceArray[t] <= (0.621371*FP1.dx/1000) or TripDistanceArray[t] >= TripD - (0.621371*(FP1.dx)/1000):
-                    x_altitude, z = FP1.GivenRangeOutputAltitude(TripDistanceArray[t])
-                    z = z * 3.28084
+                    x_altitude, z = FP1.GivenRangeOutputAltitude(TripDistanceArray[t]) # z is in meters
+                    z = z * 3.28084 # in ft
                     X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(z,45,0)
                     FootprintDistance = FootprintDistance * 0.621371 # km to miles
-                    print(0.621371*x_altitude/1000, z, TripDistanceArray[t],0.621371*FP1.dx/1000, TripD - (0.621371*(FP1.dx)/1000))
+                    # print(0.621371*x_altitude/1000, z, TripDistanceArray[t],0.621371*FP1.dx/1000, TripD - (0.621371*(FP1.dx)/1000))
                     altitude_ft = z
+                    # print(TripDistanceArray[t],0.621371*FP1.dx/1000, FP1.dx )
                 else:
                     altitude_ft = h
                     X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(h,45,0)
                     FootprintDistance = FootprintDistance * 0.621371 # km to miles
-                    print(0.621371*x_altitude/1000, z, TripDistanceArray[t],0.621371*FP1.dx/1000, TripD - (0.621371*(FP1.dx)/1000))
+                    # print(0.621371*x_altitude/1000, z, TripDistanceArray[t],0.621371*FP1.dx/1000, TripD - (0.621371*(FP1.dx)/1000))
                 # Rotate the footprint to match the heading direction
                 
                 Radial_Rotated = Radial + (np.ones(len(Radial))*TripHeading)

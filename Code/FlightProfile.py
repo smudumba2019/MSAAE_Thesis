@@ -11,50 +11,44 @@ import itertools
 from Aircraft import *
 
 class FlightProfile:
-    def __init__(self, cruise_alt, trip_distance):
-        self.JobyS4 = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 254.4, S=10.7*1.7)
-
-        # Define mission segments 
-        # The input is the trip information origin and destination (i.e., trip distance), cruise height
-        # Segments A, B, C are defined in the following ways [height (m), range (m), horizontal speed (m/s), vertical speed (m/s)]
+    def __init__(self, aircraft, cruise_alt, trip_distance):
+        self.JobyS4 = aircraft
         
-        numPoints = 10
-        self.altitude_cr = cruise_alt * 0.3048
-        self.tripDistance = trip_distance * 1609.34 # trip geodesic distance in meters
-        if cruise_alt == 1500:
-            # self.cruiseSpeed = 150 * 0.44704
-            self.cruiseSpeed = self.JobyS4.cruiseSpeed * 0.44704
-        else:
-            self.cruiseSpeed = self.JobyS4.cruiseSpeed * 0.44704
-        self.velocity_cr = self.cruiseSpeed 
-        
-        dh = self.altitude_cr - 3.048
-        self.dx = self.velocity_cr * 60
-        self.climbAngle = math.atan(dh/self.dx) # climb angle in radians
-        self.ROC = math.tan(self.climbAngle) * self.velocity_cr
-        if self.ROC >= 10: # cap rate of climb to 10 m/s
+        numPoints = 10 # each flight segment contains these many points
+        self.altitude_cr = cruise_alt * 0.3048 # cruise_alt is in feet, so converting here to meters
+        self.tripDistance = trip_distance * 1609.34 # trip geodesic distance is converted from miles to meters
+        self.cruiseSpeed = self.JobyS4.cruiseSpeed * 0.44704 # cruising speed is converted from mph to m/s
+        self.velocity_cr = self.cruiseSpeed # in m/s
+        self.dh = self.altitude_cr - 3.048 # this is the climbing height in meters
+        self.dx = self.velocity_cr * 60 # this is the horizontal distance traveled in climb phase, in meters
+        self.climbAngle = math.atan(self.dh/self.dx) # climb angle in radians
+        self.ROC = math.tan(self.climbAngle) * self.velocity_cr # Rate of Climb is in m/s
+        if self.ROC >= 10: # cap the rate of climb to 10 m/s, but this is open to change
             self.ROC = 10
+        self.ROD = -self.ROC # Rate of Descent has the opposite sign of Rate of Climb, in m/s
         
-        self.ROD = -self.ROC
-    
+        # the following altitudes are in feet
         self.segment_A_altitude = np.multiply(np.linspace(0, 3.048, numPoints),3.28084)
         self.segment_B_altitude = np.multiply(np.linspace(3.048, self.altitude_cr, numPoints),3.28084)
         self.segment_C_altitude = np.multiply(np.linspace(self.altitude_cr, self.altitude_cr, numPoints),3.28084)
         self.segment_D_altitude = np.multiply(np.linspace(self.altitude_cr, 3.048, numPoints),3.28084)
         self.segment_E_altitude = np.multiply(np.linspace(3.048, 0, numPoints),3.28084)
-    
+        
+        # the following ranges are in miles
         self.segment_A_range = np.multiply(np.linspace(0, 0, numPoints), 0.000621371)
         self.segment_B_range = np.multiply(np.linspace(0, self.dx, numPoints), 0.000621371)
         self.segment_C_range = np.multiply(np.linspace(self.dx, self.tripDistance - self.dx, numPoints),0.000621371)
         self.segment_D_range = np.multiply(np.linspace(self.tripDistance - self.dx, self.tripDistance, numPoints),0.000621371)
         self.segment_E_range = np.multiply(np.linspace(self.tripDistance, self.tripDistance, numPoints),0.000621371)
-    
+        
+        # the following horizontal velocities are in meters per second
         self.segment_A_horz_vel = np.linspace(0, 0, numPoints)
         self.segment_B_horz_vel = np.linspace(0, self.velocity_cr, numPoints)
         self.segment_C_horz_vel = np.linspace(self.velocity_cr, self.velocity_cr, numPoints)
         self.segment_D_horz_vel = np.linspace(self.velocity_cr, 0, numPoints)
         self.segment_E_horz_vel = np.linspace(0, 0, numPoints)
-    
+        
+        # the following vertical velocities are in meters per second
         self.segment_A_vert_vel = np.linspace(0.1016, 0.1016, numPoints)
         self.segment_B_vert_vel = np.linspace(self.ROC, self.ROC, numPoints)
         self.segment_C_vert_vel = np.linspace(0, 0, numPoints)
@@ -105,21 +99,21 @@ class FlightProfile:
     def GivenRangeOutputAltitude(self, distance):
         distance = 1609.34 * distance # miles to m
         
-        if distance >= self.dx and distance <= self.tripDistance - self.dx:
-            Y = self.altitude_cr
-        elif distance > 0 and distance <= self.dx:
-            dX = self.segment_B_range[-1] - self.segment_B_range[0] 
-            dY = self.segment_B_altitude[-1] - self.segment_B_altitude[0]
+        if distance >= self.dx and distance <= self.tripDistance - self.dx: # in cruising phase
+            Y = self.altitude_cr # in meters 
+        elif distance > 0 and distance <= self.dx: # in climbing phase
+            dX = (self.segment_B_range[-1] / 0.000621371) - (self.segment_B_range[0] / 0.000621371)  # convert it from miles to meters
+            dY = (self.segment_B_altitude[-1] / 3.28084) - (self.segment_B_altitude[0] / 3.28084) # convert it from feet back to meters
             slope = dY / dX
-            X0 = self.segment_B_range[0]
-            Y0 = self.segment_B_altitude[0]
+            X0 = (self.segment_B_range[0] / 0.000621371)
+            Y0 = (self.segment_B_altitude[0] / 3.28084)
             Y = slope * (distance - X0) + Y0
-        elif distance < self.tripDistance and distance > (self.tripDistance - self.dx):
-            dX = self.segment_D_range[-1] - self.segment_D_range[0] 
-            dY = self.segment_D_altitude[-1] - self.segment_D_altitude[0]
+        elif distance < self.tripDistance and distance > (self.tripDistance - self.dx): # in descending phase
+            dX = (self.segment_D_range[-1] / 0.000621371) - (self.segment_D_range[0] / 0.000621371)
+            dY = (self.segment_D_altitude[-1] / 3.28084) - (self.segment_D_altitude[0] / 3.28084)
             slope = dY / dX
-            X0 = self.segment_D_range[0]
-            Y0 = self.segment_D_altitude[0]
+            X0 = (self.segment_D_range[0] / 0.000621371)
+            Y0 = (self.segment_D_altitude[0] / 3.28084)
             Y = slope * (distance - X0) + Y0
         elif distance == 0:
             Y = 3.048
@@ -146,8 +140,9 @@ class FlightProfile:
 # one = FP1.PlotMissionProfile(fig, ax, "red","Cruise Altitude Floor: ")
 # FP1_time = FP1.FlightTime()
 # E1 = FP1.EnergyConsumption()
-
-# FP2 = FlightProfile(1500, 30)
+Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
+print(Joby)
+FP2 = FlightProfile(Joby, 1500, 30)
 # two = FP2.PlotMissionProfile(fig, ax, "blue","Reference Flight Case: ")
 # FP2_time = FP2.FlightTime()
 # E2 = FP2.EnergyConsumption()
@@ -160,7 +155,8 @@ class FlightProfile:
 # plt.text(5, 3150, " Total Flight Time: " + str(round(FP1_time))+" minutes", fontdict=font)
 # plt.legend()
 # plt.show()
-# X,Y = FP2.GivenRangeOutputAltitude(2000)
+X,Y = FP2.GivenRangeOutputAltitude(29)
+print(Y  *  3.28084)
 # X,Y = FP2.GivenRangeOutputAltitude(20000)
 # X,Y = FP2.GivenRangeOutputAltitude(45000)
 # X,Y = FP2.GivenRangeOutputAltitude(30 * 1609.34)
