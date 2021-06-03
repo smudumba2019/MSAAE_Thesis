@@ -1,0 +1,5 @@
+Started documenting in June 2021
+
+List of textbooks with free access via Purdue Library:
+1. The Global Airline Industry - Peter Belobaba, Amedeo Odoni, Cynthia Barnhart, Peter Belobaba, Amedeo Odoni, and Cynthia Barnhart
+    Description:  provides an overview of recent global airline industry evolution and future challenges; Examines the perspectives of the many stakeholders in the global airline industry including airlines, airports, air traffic services, governments, labor unions, in addition to passengers; Describes how these different players have contributed to the evolution of competition in the global airline industry, and the implications for its future evolution Includes many facets of the airline industry not covered elsewhere in any single book, for example, safety and security, labor relations and environmental impacts of aviation; Highlights recent developments such as changing airline business models, growth of emerging airlines, plans for modernizing air traffic management, and opportunities offered by new information technologies for ticket distribution; Provides detailed data on airline performance and economics updated through 2013
