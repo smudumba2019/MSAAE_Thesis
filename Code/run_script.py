@@ -16,26 +16,26 @@ import os
 import math
 import matplotlib.pyplot as plt
 
-# PlotMultipleTrips()
-main()
+PlotMultipleTrips()
+# main()
 
-"""
-GENERATE VIDEO FROM THE ABOVE TRIP SEQUENCE
-"""
-# Calling the generate_video function
-image_folder = "C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\TripAnimation\\" # make sure to use your folder
-video_name = 'DuPage2JHSHH.avi'
-os.chdir("C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\TripAnimation")
-generate_video(image_folder, video_name, 5)
+# """
+# GENERATE VIDEO FROM THE ABOVE TRIP SEQUENCE
+# """
+# # Calling the generate_video function
+# image_folder = "C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\TripAnimation\\" # make sure to use your folder
+# video_name = 'DuPage2JHSHH.avi'
+# os.chdir("C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\TripAnimation")
+# generate_video(image_folder, video_name, 5)
 
-"""
-GENERATE VIDEO FROM THE ABOVE SEQUENCE OF POLAR PLOTS
-"""
-# Calling the generate_video function
-image_folder = "C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass\\" # make sure to use your folder
-video_name = 'DuPage2JHSHH.avi'
-os.chdir("C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass")
-generate_video(image_folder, video_name, 10)
+# """
+# GENERATE VIDEO FROM THE ABOVE SEQUENCE OF POLAR PLOTS
+# """
+# # Calling the generate_video function
+# image_folder = "C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass\\" # make sure to use your folder
+# video_name = 'DuPage2JHSHH.avi'
+# os.chdir("C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\Compass")
+# generate_video(image_folder, video_name, 10)
 
 
 

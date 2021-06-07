@@ -66,9 +66,6 @@ class FlightProfile:
         ax.set_ylabel("Altitude above Mean Sea Level (feet)")
         plt.grid()
         
-        
-       
-        
     def FlightTime(self):
         time_takeoff = 3.048 / 0.1016 # in seconds
         self.time_takeoff = time_takeoff
@@ -140,9 +137,9 @@ class FlightProfile:
 # one = FP1.PlotMissionProfile(fig, ax, "red","Cruise Altitude Floor: ")
 # FP1_time = FP1.FlightTime()
 # E1 = FP1.EnergyConsumption()
-Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
-print(Joby)
-FP2 = FlightProfile(Joby, 1500, 30)
+# Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
+# print(Joby)
+# FP2 = FlightProfile(Joby, 1500, 30)
 # two = FP2.PlotMissionProfile(fig, ax, "blue","Reference Flight Case: ")
 # FP2_time = FP2.FlightTime()
 # E2 = FP2.EnergyConsumption()
@@ -155,8 +152,8 @@ FP2 = FlightProfile(Joby, 1500, 30)
 # plt.text(5, 3150, " Total Flight Time: " + str(round(FP1_time))+" minutes", fontdict=font)
 # plt.legend()
 # plt.show()
-X,Y = FP2.GivenRangeOutputAltitude(29)
-print(Y  *  3.28084)
+# X,Y = FP2.GivenRangeOutputAltitude(29)
+# print(Y  *  3.28084)
 # X,Y = FP2.GivenRangeOutputAltitude(20000)
 # X,Y = FP2.GivenRangeOutputAltitude(45000)
 # X,Y = FP2.GivenRangeOutputAltitude(30 * 1609.34)

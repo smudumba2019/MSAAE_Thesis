@@ -2,50 +2,63 @@
 """
 Author: Sai V. Mudumba
 Code Conceived: March, 2021
-Code Last Modified: May 15, 2021
+Code Last Modified: June 2, 2021
 """
+
+# LOAD THE FOLLOWING INTO THIS SCRIPT
 from TripMapper import *
 from LoadExistingUAMaerodromeInfrastructure import *
 from Aircraft import *
 from PlotInPolarCoordinates import *
-
 import numpy as np
 
 def main():
-    # This is the main code that creates instances
-    Chicago = TripMapper("Chicago","Satellite") # options for 2nd input either "Satellite" or "Map"
+    # This is the main code that creates instances of trips
+    Chicago = TripMapper("Chicago","Satellite") # option for 2nd input is either "Satellite" or "Map"
+    
     DEP = [7, 9, 13, 19] # indices for departure aerodromes
     ARR = [5, 6, 7, 8, 11] # indices for arrival aerodromes
-    idxDep = DEP[0]
-    idxArr = ARR[3]
-    # Specify trip aerodrome departure and arrival 
-    #for dep in range(1,3):
-    #    for arr in range(4,9):
-    #        Chicago.DrawGeodesicTrip(dep,arr, X[0], Y[0])
-    altitude = np.linspace(3750,5000,1) # in ft.
-    CLAP = []
+    
+    DepAerodromeType = "Regional"
+    ArrAerodromeType = "Regional"
+    
+    idxDep = DEP[0] # indicate the departure aerodrome
+    idxArr = DEP[1] # indicate the arrival aerodrome
+    
+    
+    altitude = np.linspace(3750,5000,1) # desired cruising altitude(s) in feet - it is in an array to be able to plot CLAP vs cruising altitudes
+    CLAP = [] # Contingency Landing Assurance Percentage (%) empty list defined
 
-    Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
-    Joby.Characteristics()
+    Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7) # define the aircraft
+    Joby.Characteristics() # print out the aircraft characteristics
 
+    # Iterate through each cruising altitude values in the array
     for h in altitude:
         fig, ax = plt.subplots(figsize = (8, 5),dpi=300)
-        TripD = Chicago.TripDistance(idxDep,idxArr)  # in miles      
+        TripD = Chicago.TripDistance(DepAerodromeType,ArrAerodromeType,idxDep,idxArr)  # in miles      
         FP1 = FlightProfile(Joby, h, TripD)
         FP1.PlotMissionProfile(fig, ax, "red","Cruise Altitude Floor: ")
         # # FP1_time = FP1.FlightTime()
         # dx, dh = FP1.GivenRangeOutputAltitude()
         
-        
-        
-        
+        # determine the reachable ground footprint for the aircraft defined
+        # the inputs are altitude, bank angle (but it doesn't play a role in the code), power failure level (doesn't play a role in the code yet)
+        # the outputs are X, Y of the footprint, also equivalent Radial and Distance for polar plots
         X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(h,45,0)
         FootprintDistance = FootprintDistance * 0.621371 # km to miles
-        distance, direction, aerodromeType = Chicago.DrawGeodesicTrip(idxDep,idxArr, X, Y)
         
-        TripDistanceArray = np.linspace(0,TripD,len(distance)-1)# in miles
-
-        if len(altitude) == 1:
+        # Draw the geodesic trip on a map with the following information:
+        # (a) all existing infrastructures, 
+        # (b) departure aerodrome and arrival aerodrome 
+        # (c) the route path (i.e., geodesic or non-direct routing)
+        # (d) the footprint along the route
+        # Output(s): distance, its direction, and aerodrome type to any contingency landing site along the route
+        distance, direction, aerodromeType = Chicago.DrawGeodesicTrip(DepAerodromeType,ArrAerodromeType,idxDep,idxArr, X, Y)
+        
+        
+        TripDistanceArray = np.linspace(0,TripD,len(distance)-1) # an array of the trip route in miles
+        
+        if len(altitude) == 1: # this condition only exists because I don't want to run this for all indices in the altitude array
             """
             COMPASS PLOT GENERATION (I.E., POLAR PLOT)
             """
@@ -53,8 +66,6 @@ def main():
             # https://www.kite.com/python/answers/how-to-add-leading-zeros-to-a-number-in-python
             # https://matplotlib.org/stable/api/projections_api.html
             # https://stackoverflow.com/questions/16085397/changing-labels-in-matplotlib-polar-plot
-            teta = np.linspace(0,2*math.pi,100)
-            r = 12.6
             
             TripHeading = math.pi/2 - Chicago.triphead * math.pi/180
             for t in range(len(distance)-1): 
@@ -66,21 +77,16 @@ def main():
                     z = z * 3.28084 # in ft
                     X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(z,45,0)
                     FootprintDistance = FootprintDistance * 0.621371 # km to miles
-                    # print(0.621371*x_altitude/1000, z, TripDistanceArray[t],0.621371*FP1.dx/1000, TripD - (0.621371*(FP1.dx)/1000))
                     altitude_ft = z
-                    # print(TripDistanceArray[t],0.621371*FP1.dx/1000, FP1.dx )
                 else:
                     altitude_ft = h
                     X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(h,45,0)
                     FootprintDistance = FootprintDistance * 0.621371 # km to miles
-                    # print(0.621371*x_altitude/1000, z, TripDistanceArray[t],0.621371*FP1.dx/1000, TripD - (0.621371*(FP1.dx)/1000))
-                # Rotate the footprint to match the heading direction
                 
+                # Rotate the footprint to match the heading direction
                 Radial_Rotated = Radial + (np.ones(len(Radial))*TripHeading)
-                fig, ax = PlotInPolarCoordinates(distance[t:t+1], direction[t:t+1], teta, r)
+                fig, ax = PlotInPolarCoordinates(distance[t:t+1], direction[t:t+1])
                 ax.plot(Radial_Rotated,FootprintDistance)
-               
-                    
             
                 if aerodromeType[t] == 0: # if regional airport
                     colorTarget = 'ro'
@@ -115,13 +121,16 @@ def main():
 def PlotMultipleTrips():
     Chicago = TripMapper("Chicago","Satellite") # options for 2nd input either "Satellite" or "Map"
     Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
-    X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(1500,45,0)
+    X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(1000,45,0)
     # Specify trip aerodrome departure and arrival 
     DEP = [7] #, 9, 13, 19]
-    ARR = [5, 6, 7, 8, 11]
+    ARR = [13]#, 6, 7, 8, 11]
+    depType = "Regional"
+    arrType = "Regional"
     for dep in DEP:
         for arr in ARR:
-            Chicago.DrawGeodesicTrip(dep,arr, X, Y)
+            # Chicago.DrawGeodesicTrip(depType, arrType, dep,arr, X, Y)
+            Chicago.DrawNonDirectRoutingTrip(depType, arrType, dep,arr, Joby, 1000)
     Chicago.ShowMap()
 
 # PlotMultipleTrips()

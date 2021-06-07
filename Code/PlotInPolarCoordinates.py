@@ -9,7 +9,7 @@ import math
 import matplotlib.pyplot as plt
 
 
-def PlotInPolarCoordinates(distance, direction, teta, r, arrowprops=None):
+def PlotInPolarCoordinates(distance, direction, arrowprops=None):
     """
     Reference: https://ocefpaf.github.io/python4oceanographers/blog/2015/02/09/compass/
     Compass draws a graph that displays the vectors with

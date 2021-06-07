@@ -7,40 +7,48 @@ Code Last Modified: May 15, 2021
 
 import pandas as pd # see pandas documentation
 import math
+
 class LoadExistingUAMaerodromeInfrastructure:
     """
-    LoadExistingUAMAerodromeInfrastructure is a class that loads an excel spreadsheet of aerodrome locations from a folder
-    
-    Inputs:
+    CLASS DEFINITION:
+        LoadExistingUAMAerodromeInfrastructure is a class that
+        - loads an excel spreadsheet (.xlsx) of aerodrome locations from a folder
+        - converts the lat, lon coordinates from degrees to mercator so that they can be plotted on a tilemap using Bokeh library
+        *** see the excel document to see how it is formatted ***
+        
+    INPUT(S):
         Name of the metropolitan area (e.g., "Chicago" or "Dallas")
     
-    Attributes:
-        1. FilePath
-        2. ...
-        
-        
-    Methods:
-        1. ReadExcelSheet - reads in mercator coordinates with units in meters
-        2. ReadExcelSheetInDegreesOnly
-        3. InMercator
-        4. Degrees2Mercator
-        5. Mercator2Degrees
+    ATTRIBUTE(S):
+        1. MetroName: name of the metropolitan area (e.g., "Chicago") 
+        2. FilePath: this is the location of the excel spreadsheet
+        3. lat_regional_merc: read latitude information in mercator coordinates
+        4. lon_regional_merc: read longitude information in mercator coordinates
+        5. lat_regional_deg: read latitude information in degree coordinates
+        6. lon_regional_deg: read latitude information in degree coordinates
+        7. (...) same as above for other types of aerodromes (i.e., major and heliports)    
     
+    METHOD(S):
+        1. ReadExcelSheetInMercatorOnly - reads lat, lon coordinates (provided in degrees) in mercator coordinates, with units in meters
+        2. ReadExcelSheetInDegreesOnly - reads lat, lon coordinates as provided in the excel spreadsheet, without converting it to mercator coordinates
+        3. InMercator - this function creates two more columns in the pandas database for lat and lon in mercator coordinates
+        4. Degrees2Mercator - converts (lat, lon) from degrees to mercator coordinates
+        5. Mercator2Degrees - converts (lat, lon) from mercator to degrees
     """
     
     def __init__(self, MetroName):
         self.MetroName = MetroName
         self.FilePath = "C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Datasets/" + self.MetroName + "/" + self.MetroName + ".xlsx"
         
-        self.lat_regional_merc, self.lon_regional_merc = self.ReadExcelSheet(self.FilePath, "Regional")
-        self.lat_major_merc, self.lon_major_merc = self.ReadExcelSheet(self.FilePath, "Major")
-        self.lat_heliports_merc, self.lon_heliports_merc = self.ReadExcelSheet(self.FilePath, "Heliports")
+        self.lat_regional_merc, self.lon_regional_merc = self.ReadExcelSheetInMercatorOnly(self.FilePath, "Regional")
+        self.lat_major_merc, self.lon_major_merc = self.ReadExcelSheetInMercatorOnly(self.FilePath, "Major")
+        self.lat_heliports_merc, self.lon_heliports_merc = self.ReadExcelSheetInMercatorOnly(self.FilePath, "Heliports")
         
         self.lat_regional_deg, self.lon_regional_deg = self.ReadExcelSheetInDegreesOnly(self.FilePath, "Regional")
         self.lat_major_deg, self.lon_major_deg = self.ReadExcelSheetInDegreesOnly(self.FilePath, "Major")
         self.lat_heliports_deg, self.lon_heliports_deg = self.ReadExcelSheetInDegreesOnly(self.FilePath, "Heliports")
 
-    def ReadExcelSheet(self, FilePath, SheetName):
+    def ReadExcelSheetInMercatorOnly(self, FilePath, SheetName):
         loadSheet = pd.read_excel(FilePath, sheet_name = SheetName)
         lat_deg = loadSheet["LatD"]
         lon_deg = loadSheet["LonD"]
@@ -54,8 +62,8 @@ class LoadExistingUAMaerodromeInfrastructure:
         return lat_deg, lon_deg
         
     def InMercator(self, lat_deg, lon_deg):
-        d = {"LatD" : lat_deg, "LonD" : lon_deg}
-        all_p = pd.DataFrame(data = d)
+        d = {"LatD" : lat_deg, "LonD" : lon_deg} # a dictionary - keys: Lat, Lon - values: list of coordinates in degrees
+        all_p = pd.DataFrame(data = d) # creates a 2D data structure, with two columns named LatD, LonD
         
         lat_merc = []
         lon_merc = []
@@ -68,7 +76,8 @@ class LoadExistingUAMaerodromeInfrastructure:
     
     def Degrees2Mercator(self, Coords):
         """
-        Converts to Mercator Coordinates from Latitude, Longitude in degrees because bokeh module depends on it
+        Takes in a tuple as an input.
+        Converts to Mercator Coordinates from Latitude, Longitude in degrees
         Input = e.g., (42, -88)
         Output = e.g., (-9780000, -9745000)
         """
