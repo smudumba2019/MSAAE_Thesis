@@ -26,7 +26,7 @@ PlotMultipleTrips()
 # image_folder = "C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\TripAnimation\\" # make sure to use your folder
 # video_name = 'DuPage2JHSHH.avi'
 # os.chdir("C:\\Users\\Sai Mudumba\\Documents\\MSAAE_Thesis_Code\\Images\\TripAnimation")
-# generate_video(image_folder, video_name, 5)
+# generate_video(image_folder, video_name, 15)
 
 # """
 # GENERATE VIDEO FROM THE ABOVE SEQUENCE OF POLAR PLOTS

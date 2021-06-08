@@ -94,7 +94,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         return tripDistance
     
     def DrawNonDirectRoutingTrip(self, DepType, ArrType, idxDep, idxArr, Aircraft, CruiseAltitudeInFeet):
-        X, Y, Radial, FootprintDistance = Aircraft.ReachableGroundFootprint(CruiseAltitudeInFeet,45,0)
+        
         # FOR DEPARTURES
         if DepType == "Regional":
             latDep_deg = self.lat_regional_deg[idxDep]
@@ -146,11 +146,18 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
 
         for w in range(howManyWaypoints):
             latWP_inMerc, lonWP_inMerc = self.Degrees2Mercator((latWP_inDeg[w], lonWP_inDeg[w]))
+            # print(latWP_inMerc, lonWP_inMerc)
             LatWaypoints_inDeg.insert(w+1, latWP_inDeg[w])
             LonWaypoints_inDeg.insert(w+1, lonWP_inDeg[w])
             LatWaypoints_inMerc.insert(w+1, latWP_inMerc)
             LonWaypoints_inMerc.insert(w+1, lonWP_inMerc)
-                
+        
+        # DEBUG
+        # plt.plot(LonWaypoints_inMerc,LatWaypoints_inMerc)
+        # plt.show()
+        # plt.plot(LonWaypoints_inDeg,LatWaypoints_inDeg)
+        # plt.show()
+        
         LatArrayforAllWaypoints_inMerc = []
         LonArrayforAllWaypoints_inMerc = []
         LatArrayforAllWaypoints_inDeg = []
@@ -158,8 +165,12 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         TripHeadingArrayforAllWaypoints_inDeg = []
         TripDistanceNonDirectRouteArray = []
         
+        TripHeadingLargerArray = []
+        TripDistanceNonDirectRouteLargerArray = []
+        
         for l in range(len(LonWaypoints_inMerc)-1):
             Lat_inMerc, Lon_inMerc, TripHeading = self.WaypointsConnector((LatWaypoints_inMerc[l], LonWaypoints_inMerc[l]),(LatWaypoints_inMerc[l+1], LonWaypoints_inMerc[l+1]),250)
+            
             LatArrayforAllWaypoints_inMerc.append(Lat_inMerc)
             LonArrayforAllWaypoints_inMerc.append(Lon_inMerc)
             
@@ -167,25 +178,38 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
             LatArrayforAllWaypoints_inDeg.append(Lat_inDeg)
             LonArrayforAllWaypoints_inDeg.append(Lon_inDeg)
             
-            TripHeadingArrayforAllWaypoints_inDeg.append(TripHeading_deg) # node it's TripHeading_deg
+            TripHeadingArrayforAllWaypoints_inDeg.append(TripHeading_deg[0]) # node it's TripHeading_deg
+            TripHeadingLargerArray.append(TripHeading_deg)
 
             TripDistanceWP = self.GeodesicDistance(LatWaypoints_inDeg[l], LonWaypoints_inDeg[l], LatWaypoints_inDeg[l+1], LonWaypoints_inDeg[l+1])
-            TripDistanceNonDirectRouteArray.append(TripDistanceWP)
+            TripDistanceNonDirectRouteArray.append(TripDistanceWP)    
             
         # FLATTEN THE NESTED LISTS INTO ONE SINGLE LIST
         self.LatArrayforAllWaypoints_inMerc_flattened = list(chain.from_iterable(LatArrayforAllWaypoints_inMerc))
         self.LonArrayforAllWaypoints_inMerc_flattened = list(chain.from_iterable(LonArrayforAllWaypoints_inMerc))
         self.LatArrayforAllWaypoints_inDeg_flattened = list(chain.from_iterable(LatArrayforAllWaypoints_inDeg))
         self.LonArrayforAllWaypoints_inDeg_flattened = list(chain.from_iterable(LonArrayforAllWaypoints_inDeg))
+        self.TripHeadingLargerArray = list(chain.from_iterable(TripHeadingLargerArray))
         
         TripDistanceNonDirectRoute = sum(TripDistanceNonDirectRouteArray)
+        print(f'Length of Each Flight Segment (miles): {TripDistanceNonDirectRouteArray}')
         self.TripDistanceNonDirectRoute = TripDistanceNonDirectRoute
         DetourRatio = self.CalculateDetourRatio()
 
         print(f'Trip Distance with Non-direct routing: {TripDistanceNonDirectRoute} miles')
         print(f'Detour Ratio: {DetourRatio*100} % Longer')
         print(f'Heading Direction: {TripHeadingArrayforAllWaypoints_inDeg} deg')
-
+        
+        # Find incremental distance increase as trip progresses
+        for o in range(len(self.LatArrayforAllWaypoints_inDeg_flattened)-1):
+            IncrementalDistance = self.GeodesicDistance(self.LatArrayforAllWaypoints_inDeg_flattened[o], self.LonArrayforAllWaypoints_inDeg_flattened[o], self.LatArrayforAllWaypoints_inDeg_flattened[o+1], self.LonArrayforAllWaypoints_inDeg_flattened[o+1])
+            TripDistanceNonDirectRouteLargerArray.append(IncrementalDistance)
+        TripDistanceNonDirectRouteLargerArray[len(self.TripHeadingLargerArray)-2] =  0*TripDistanceNonDirectRouteLargerArray[-1]
+        TripDistanceNonDirectRouteLargerArray.insert(len(self.TripHeadingLargerArray), 0*TripDistanceNonDirectRouteLargerArray[-1])
+        
+        # PLOT THE AIRCRAFT FLIGHT PROFILE FOR ITS TRIP
+        FP1 = self.PlotFlightProfiles(Aircraft,CruiseAltitudeInFeet)
+        
         # FIND THE CLOSEST CONTINGENCY UAM AERODROME FROM THE VEHICLE'S POSITION ALONG THE ROUTE
         Distance2ClosestContingencySite, Direction, Labeling = self.FindClosestUAMaerodromeAlongTheRoute()      
 
@@ -193,9 +217,55 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         # ROTATE THE REACHABLE FOOTPRINT COORDINATES BY TRIP HEADING DIRECTION
         for n in range(howManyWaypoints+1):
             self.p.line(LatArrayforAllWaypoints_inMerc[n], LonArrayforAllWaypoints_inMerc[n], color = 'white', line_width = 2)
-            X_new, Y_new = self.RotateReachableFootprintByTripHeading(X, Y, TripHeadingArrayforAllWaypoints_inDeg[n])
-            self.PlotReachableRadiusAlongRoute(LatArrayforAllWaypoints_inMerc[n], LonArrayforAllWaypoints_inMerc[n], X_new, Y_new)
-    
+        
+        # ITERATE THOUGH THE PATH AND FIND THE FOOTPTINT FOR EACH FLIGHT PATH ALTITUDE
+        for m in range(len(self.LatArrayforAllWaypoints_inMerc_flattened)): # go through each point in trip and find footprint for each point according to its flight profile
+            TripDistanceRel2Dep = sum(TripDistanceNonDirectRouteLargerArray[0:m])#self.GeodesicDistance(self.LatArrayforAllWaypoints_inDeg_flattened[m], self.LonArrayforAllWaypoints_inDeg_flattened[m], self.LatArrayforAllWaypoints_inDeg_flattened[0], self.LonArrayforAllWaypoints_inDeg_flattened[0])
+            if TripDistanceRel2Dep <= (0.621371*FP1.dx/1000) or TripDistanceRel2Dep >= self.TripDistanceNonDirectRoute - (0.621371*(FP1.dx)/1000):
+                x_altitude, z = FP1.GivenRangeOutputAltitude(TripDistanceRel2Dep) # z is in meters
+                z = z * 3.28084 # in ft
+                X, Y, Radial, FootprintDistance = Aircraft.ReachableGroundFootprint(z,45,0)
+                FootprintDistance = FootprintDistance * 0.621371 # km to miles
+                altitude_ft = z
+            else:
+                altitude_ft = CruiseAltitudeInFeet
+                X, Y, Radial, FootprintDistance = Aircraft.ReachableGroundFootprint(CruiseAltitudeInFeet,45,0)
+                FootprintDistance = FootprintDistance * 0.621371 # km to miles
+            X_new, Y_new = self.RotateReachableFootprintByTripHeading(X, Y, self.TripHeadingLargerArray[m])
+            if m % 5 == 1:
+                self.PlotReachableRadiusAlongRoute(self.LatArrayforAllWaypoints_inDeg_flattened[m], self.LonArrayforAllWaypoints_inDeg_flattened[m], X_new, Y_new, Save=(False,m))
+              
+    def PlotFlightProfiles(self,Aircraft,CruiseAltitudeInFeet):
+        font = {'family': 'serif',
+        'color':  'darkred',
+        'weight': 'normal',
+        'size': 12,
+        }
+        fig, ax = plt.subplots(figsize = (8, 5),dpi=300)
+        
+        FP1 = FlightProfile(Aircraft, CruiseAltitudeInFeet, self.TripDistanceNonDirectRoute)
+        one = FP1.PlotMissionProfile(fig, ax, "red","Cruise Altitude Floor: ")
+        FP1_time = FP1.FlightTime()
+        E1 = FP1.EnergyConsumption()
+        
+        FP2 = FlightProfile(Aircraft, 1500, 30)
+        two = FP2.PlotMissionProfile(fig, ax, "blue","Reference Flight Case: ")
+        FP2_time = FP2.FlightTime()
+        E2 = FP2.EnergyConsumption()
+        
+        ax.set_title("Mission Profile using Joby-like S4 eVTOL Aircraft: \nDuPage Airport to John H. Stroger Hospital Helipad Trips")
+        ax.set_xlabel("Trip Distance (miles)")
+        ax.set_ylabel("Altitude above Mean Sea Level (feet)")
+        
+        plt.text(5, 1250, " Total Energy Consumed: " + str(round(E2))+" kWh", fontdict=font)
+        plt.text(5, 950, " Total Flight Time: " + str(round(FP2_time))+" minutes", fontdict=font)
+        
+        plt.text(5, 3450, " Total Energy Consumed: " + str(round(E1))+" kWh", fontdict=font)
+        plt.text(5, 3150, " Total Flight Time: " + str(round(FP1_time))+" minutes", fontdict=font)
+        plt.legend()
+        plt.show()
+        return FP1
+        
     def FindClosestUAMaerodromeAlongTheRoute(self):
         DistanceLinspace = np.linspace(0, self.TripDistanceNonDirectRoute, len(self.LatArrayforAllWaypoints_inMerc_flattened))        
         Distance2ClosestContingencySite = [] # in miles
@@ -312,22 +382,16 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         self.Y = Y_new
         return X_new, Y_new  
     
-    def PlotReachableRadiusAlongRoute(self, Lat, Lon, X_new, Y_new):
-        for j in range(len(Lat)):
-            # LAT_DEG = []
-            # LON_DEG = []
-            # DIST = []
-            # for i in range(len(X)):
-            #     lat_deg, lon_deg = self.Mercator2Degrees((Lat[j]+Y_new[i]),(Lon[j]-X_new[i]))
-            #     #print(Lat_deg[j], Lon_deg[j], lat_deg, lon_deg)
-            #     DST = self.GeodesicDistance(Lat_deg[j], Lon_deg[j], lat_deg, lon_deg)
-            #     LAT_DEG.append(lat_deg)
-            #     LON_DEG.append(lon_deg)
-            #     DIST.append(DST)
-                            
-            if j % 100 == 50:
-                self.p.circle(Lat[j], Lon[j], color = 'yellow', alpha = 1, size = 3)
-                self.p.patch(Lat[j]*np.ones(len(Y_new))+Y_new, Lon[j]*np.ones(len(X_new))-X_new, alpha = 0.3, color="white")
+    def PlotReachableRadiusAlongRoute(self, Lat, Lon, X_new, Y_new, Save):
+        Lat, Lon = self.Degrees2Mercator((Lat, Lon))
+        self.p.circle(Lat, Lon, color = 'yellow', alpha = 1, size = 3)
+        self.p.patch(Lat*np.ones(len(Y_new))+Y_new, Lon*np.ones(len(X_new))-X_new, alpha = 0.3, color="white")
+        if Save[0] == True:
+            self.SaveMap(Lat, Lon, Save[1], Lat*np.ones(len(Y_new))+Y_new, Lon*np.ones(len(X_new))-X_new)
+            # number_str = str(Save[1])
+            # # output_file("C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png")
+            # filename="C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png"
+            # export_png(self.p, filename=filename )
         return None
     
         
@@ -610,6 +674,8 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         # FIND THE HEADING DIRECTION IN DEGREES
         TripHeading = self.EstimateTripHeading(delLat, delLon)
         
+        # MAKE TRIP HEADING THE SAME SIZE AS THE REST OF THE OUTPUTS
+        TripHeading = TripHeading * np.ones(sampSize)
         return LatArray_inMerc, LonArray_inMerc, TripHeading
    
     def EstimateTripHeading(self, delLat, delLon):     
@@ -637,11 +703,11 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         plt.show()
     
         
-    def SaveMap(self, Lon, Lat, imgNum, Latj, Lonj, PatchLatj, PatchLonj):
+    def SaveMap(self, Lat, Lon, imgNum, PatchLatj, PatchLonj):
         # output_notebook()
         q = self.MapperInfrastructure()
-        q.line(Lat, Lon, color = 'white', line_width = 2)
-        q.circle(Latj, Lonj, color = 'yellow', alpha = 1, size = 3)
+        q.line(self.LatArrayforAllWaypoints_inMerc_flattened, self.LonArrayforAllWaypoints_inMerc_flattened, color = 'white', line_width = 2)
+        q.circle(Lat, Lon, color = 'yellow', alpha = 1, size = 3)
         q.patch(PatchLatj, PatchLonj, alpha = 0.3, color="white")
         number_str = str(imgNum)
         # output_file("C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png")

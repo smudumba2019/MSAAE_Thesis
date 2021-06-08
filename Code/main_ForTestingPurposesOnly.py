@@ -121,16 +121,16 @@ def main():
 def PlotMultipleTrips():
     Chicago = TripMapper("Chicago","Satellite") # options for 2nd input either "Satellite" or "Map"
     Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
-    X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(1000,45,0)
+    X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(3750,45,0)
     # Specify trip aerodrome departure and arrival 
     DEP = [7] #, 9, 13, 19]
-    ARR = [13]#, 6, 7, 8, 11]
+    ARR = [19]#, 6, 7, 8, 11]
     depType = "Regional"
     arrType = "Regional"
     for dep in DEP:
         for arr in ARR:
             # Chicago.DrawGeodesicTrip(depType, arrType, dep,arr, X, Y)
-            Chicago.DrawNonDirectRoutingTrip(depType, arrType, dep,arr, Joby, 1000)
+            Chicago.DrawNonDirectRoutingTrip(depType, arrType, dep,arr, Joby, 3750)
     Chicago.ShowMap()
 
 # PlotMultipleTrips()

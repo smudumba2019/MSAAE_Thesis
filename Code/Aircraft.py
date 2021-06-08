@@ -111,7 +111,7 @@ class Aircraft:
                         ETA.append(math.pi + math.atan(x/y))
                     elif (x < 0 and y > 0):
                         ETA.append(2 * math.pi + math.atan(x/y))
-                print("I")
+                # print("I")
                 break
             
             X_RHS.append(x)

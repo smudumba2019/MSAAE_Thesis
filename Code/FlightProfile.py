@@ -61,9 +61,9 @@ class FlightProfile:
         ax.plot(self.segment_C_range, self.segment_C_altitude, '-b', color=color, linewidth=2, label=case + str(round(max(self.segment_C_altitude))) + " ft., " "Cruise Speed: " + str(round(self.cruiseSpeed/0.44704)) + " mph")
         ax.plot(self.segment_D_range, self.segment_D_altitude, '-b', color=color, linewidth=2)
         ax.plot(self.segment_E_range, self.segment_E_altitude, '-b', color=color, linewidth=2)
-        ax.set_title("Mission Profile using Joby-like S4 eVTOL Aircraft: \nDuPage Airport to John H. Stroger Hospital Helipad Trips")
-        ax.set_xlabel("Trip Distance (miles)")
-        ax.set_ylabel("Altitude above Mean Sea Level (feet)")
+        # ax.set_title("Mission Profile using Joby-like S4 eVTOL Aircraft: \nDuPage Airport to John H. Stroger Hospital Helipad Trips")
+        # ax.set_xlabel("Trip Distance (miles)")
+        # ax.set_ylabel("Altitude above Mean Sea Level (feet)")
         plt.grid()
         
     def FlightTime(self):
