@@ -118,19 +118,47 @@ def main():
     return None
     # return (Radial, FootprintDistance, distance, direction, aerodromeType, Chicago.triphead)
 
-def PlotMultipleTrips():
+def PlotMultipleTrips(cruiseAltitudeInFeet, Show = False):
     Chicago = TripMapper("Chicago","Satellite") # options for 2nd input either "Satellite" or "Map"
     Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
     X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(3750,45,0)
     # Specify trip aerodrome departure and arrival 
     DEP = [7] #, 9, 13, 19]
-    ARR = [19]#, 6, 7, 8, 11]
+    ARR = [8]#, 6, 7, 8, 11]
     depType = "Regional"
-    arrType = "Regional"
+    arrType = "Heliport"
+    
+    lonWP_inDeg = [-88.10997, -87.81231] #(lonDep_deg + lonArr_deg) / 2
+    latWP_inDeg = [41.91645,41.91313] #(latDep_deg + latArr_deg) / 2
+    WayPoints = [lonWP_inDeg, latWP_inDeg]
+    
     for dep in DEP:
         for arr in ARR:
             # Chicago.DrawGeodesicTrip(depType, arrType, dep,arr, X, Y)
-            Chicago.DrawNonDirectRoutingTrip(depType, arrType, dep,arr, Joby, 3750)
-    Chicago.ShowMap()
-
+            Chicago.DrawNonDirectRoutingTrip(depType, arrType, dep,arr, Joby, cruiseAltitudeInFeet, WayPoints, Save=False)
+    if Show == True:
+        Chicago.ShowMap()
+    return Chicago.CLAP
+    
+def PlotCLAP():
+    altitude = np.linspace(1500,7000,10) # desired cruising altitude(s) in feet - it is in an array to be able to plot CLAP vs cruising altitudes
+    CLAP = []
+    
+    for h in altitude:
+        clap = PlotMultipleTrips(h, False)
+        CLAP.append(100-clap)
+    
+    fig, ax = plt.subplots(figsize=(8,5))
+    ax.plot(altitude, CLAP,linewidth='3')
+    ax.set_xlabel('Cruise Altitude Floor (ft.)')
+    ax.set_ylabel('Contingency Landing Assurance Percentage (%)')
+    ax.set_title('Contingency Landing Assurance Pecentage vs. Cruise Altitude Floor')
+    ax.set_yticks([0,10,20,30,40,50,60,70,80,90,100])
+    ax.set_xticks(np.arange(1500,7500,500))
+    ax.minorticks_on()
+    ax.grid(which='major', linestyle='-', linewidth='0.25', color='black')
+    ax.grid(which='minor', linestyle=':', linewidth='0.25', color='black')
+    # plt.grid()
+    plt.savefig('C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/CLAPvsAltRevised.png', dpi=500)
+    plt.show()
 # PlotMultipleTrips()

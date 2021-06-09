@@ -93,7 +93,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         tripDistance = geodesicDistance
         return tripDistance
     
-    def DrawNonDirectRoutingTrip(self, DepType, ArrType, idxDep, idxArr, Aircraft, CruiseAltitudeInFeet):
+    def DrawNonDirectRoutingTrip(self, DepType, ArrType, idxDep, idxArr, Aircraft, CruiseAltitudeInFeet, WayPoints, Save):
         
         # FOR DEPARTURES
         if DepType == "Regional":
@@ -140,8 +140,8 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         LatWaypoints_inMerc = [latDep_merc, latArr_merc]
         LonWaypoints_inMerc = [lonDep_merc, lonArr_merc]
         
-        lonWP_inDeg = [-88.2,-88.108, -88] #(lonDep_deg + lonArr_deg) / 2
-        latWP_inDeg = [41.83,41.99,42] #(latDep_deg + latArr_deg) / 2
+        lonWP_inDeg = WayPoints[0]#[-88.2,-88.108, -88] #(lonDep_deg + lonArr_deg) / 2
+        latWP_inDeg = WayPoints[1]#[41.83,41.99,42] #(latDep_deg + latArr_deg) / 2
         howManyWaypoints = len(lonWP_inDeg)
 
         for w in range(howManyWaypoints):
@@ -157,7 +157,8 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         # plt.show()
         # plt.plot(LonWaypoints_inDeg,LatWaypoints_inDeg)
         # plt.show()
-        
+        X_newArray = []
+        Y_newArray = []
         LatArrayforAllWaypoints_inMerc = []
         LonArrayforAllWaypoints_inMerc = []
         LatArrayforAllWaypoints_inDeg = []
@@ -169,11 +170,6 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         TripDistanceNonDirectRouteLargerArray = []
         
         for l in range(len(LonWaypoints_inMerc)-1):
-            Lat_inMerc, Lon_inMerc, TripHeading = self.WaypointsConnector((LatWaypoints_inMerc[l], LonWaypoints_inMerc[l]),(LatWaypoints_inMerc[l+1], LonWaypoints_inMerc[l+1]),250)
-            
-            LatArrayforAllWaypoints_inMerc.append(Lat_inMerc)
-            LonArrayforAllWaypoints_inMerc.append(Lon_inMerc)
-            
             Lat_inDeg, Lon_inDeg, TripHeading_deg = self.WaypointsConnector((LatWaypoints_inDeg[l], LonWaypoints_inDeg[l]),(LatWaypoints_inDeg[l+1], LonWaypoints_inDeg[l+1]),250)
             LatArrayforAllWaypoints_inDeg.append(Lat_inDeg)
             LonArrayforAllWaypoints_inDeg.append(Lon_inDeg)
@@ -185,10 +181,17 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
             TripDistanceNonDirectRouteArray.append(TripDistanceWP)    
             
         # FLATTEN THE NESTED LISTS INTO ONE SINGLE LIST
-        self.LatArrayforAllWaypoints_inMerc_flattened = list(chain.from_iterable(LatArrayforAllWaypoints_inMerc))
-        self.LonArrayforAllWaypoints_inMerc_flattened = list(chain.from_iterable(LonArrayforAllWaypoints_inMerc))
         self.LatArrayforAllWaypoints_inDeg_flattened = list(chain.from_iterable(LatArrayforAllWaypoints_inDeg))
         self.LonArrayforAllWaypoints_inDeg_flattened = list(chain.from_iterable(LonArrayforAllWaypoints_inDeg))
+
+        for u in range(len(self.LatArrayforAllWaypoints_inDeg_flattened)):
+            Lat_inMerc, Lon_inMerc = self.Degrees2Mercator((self.LatArrayforAllWaypoints_inDeg_flattened[u],self.LonArrayforAllWaypoints_inDeg_flattened[u]))
+            LatArrayforAllWaypoints_inMerc.append(Lat_inMerc)
+            LonArrayforAllWaypoints_inMerc.append(Lon_inMerc)
+            
+        self.LatArrayforAllWaypoints_inMerc_flattened = LatArrayforAllWaypoints_inMerc
+        self.LonArrayforAllWaypoints_inMerc_flattened = LonArrayforAllWaypoints_inMerc
+        
         self.TripHeadingLargerArray = list(chain.from_iterable(TripHeadingLargerArray))
         
         TripDistanceNonDirectRoute = sum(TripDistanceNonDirectRouteArray)
@@ -232,9 +235,14 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
                 X, Y, Radial, FootprintDistance = Aircraft.ReachableGroundFootprint(CruiseAltitudeInFeet,45,0)
                 FootprintDistance = FootprintDistance * 0.621371 # km to miles
             X_new, Y_new = self.RotateReachableFootprintByTripHeading(X, Y, self.TripHeadingLargerArray[m])
-            if m % 5 == 1:
-                self.PlotReachableRadiusAlongRoute(self.LatArrayforAllWaypoints_inDeg_flattened[m], self.LonArrayforAllWaypoints_inDeg_flattened[m], X_new, Y_new, Save=(False,m))
-              
+            X_newArray.append(X_new)
+            Y_newArray.append(Y_new)
+            if m % 10 == 1:
+                self.PlotReachableRadiusAlongRoute(self.LatArrayforAllWaypoints_inDeg_flattened[m], self.LonArrayforAllWaypoints_inDeg_flattened[m], X_new, Y_new, Save=(Save,m))
+            
+        # FIND CLAP
+        self.ComputeCLAP(X_newArray, Y_newArray, Distance2ClosestContingencySite, Direction)
+            
     def PlotFlightProfiles(self,Aircraft,CruiseAltitudeInFeet):
         font = {'family': 'serif',
         'color':  'darkred',
@@ -253,16 +261,18 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         FP2_time = FP2.FlightTime()
         E2 = FP2.EnergyConsumption()
         
-        ax.set_title("Mission Profile using Joby-like S4 eVTOL Aircraft: \nDuPage Airport to John H. Stroger Hospital Helipad Trips")
+        ax.set_title("Flight Profile using Joby-like S4 eVTOL Aircraft: \nDuPage Airport to John H. Stroger Hospital Helipad Trips")
         ax.set_xlabel("Trip Distance (miles)")
         ax.set_ylabel("Altitude above Mean Sea Level (feet)")
         
         plt.text(5, 1250, " Total Energy Consumed: " + str(round(E2))+" kWh", fontdict=font)
-        plt.text(5, 950, " Total Flight Time: " + str(round(FP2_time))+" minutes", fontdict=font)
+        plt.text(5, 950, " Total Flight Time: " + str(round(FP2_time,2))+" minutes", fontdict=font)
         
-        plt.text(5, 3450, " Total Energy Consumed: " + str(round(E1))+" kWh", fontdict=font)
-        plt.text(5, 3150, " Total Flight Time: " + str(round(FP1_time))+" minutes", fontdict=font)
-        plt.legend()
+        plt.text(5, CruiseAltitudeInFeet-300, " Total Energy Consumed: " + str(round(E1))+" kWh", fontdict=font)
+        plt.text(5, CruiseAltitudeInFeet-500, " Total Flight Time: " + str(round(FP1_time,2))+" minutes", fontdict=font)
+        plt.legend(bbox_to_anchor=(0., -0.30), loc='lower left')
+        plt.tight_layout()
+        plt.savefig('C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/FlightProfileDirectRoute.png', dpi=500)
         plt.show()
         return FP1
         
@@ -388,266 +398,69 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         self.p.patch(Lat*np.ones(len(Y_new))+Y_new, Lon*np.ones(len(X_new))-X_new, alpha = 0.3, color="white")
         if Save[0] == True:
             self.SaveMap(Lat, Lon, Save[1], Lat*np.ones(len(Y_new))+Y_new, Lon*np.ones(len(X_new))-X_new)
-            # number_str = str(Save[1])
-            # # output_file("C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png")
-            # filename="C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png"
-            # export_png(self.p, filename=filename )
         return None
     
-        
     def CalculateDetourRatio(self):
         DR = (self.TripDistanceNonDirectRoute - self.tripDistance) / self.tripDistance 
         return DR
     
-    def DrawGeodesicTrip(self, DepType, ArrType, idxDep, idxArr, X, Y):
-        sampSize = 500
-        self.sampleSize = sampSize
-        
-        if DepType == "Regional":
-            latDep_deg = self.lat_regional_deg[idxDep]
-            lonDep_deg = self.lon_regional_deg[idxDep]
-            latDep_merc = self.lat_regional_merc[idxDep]
-            lonDep_merc = self.lon_regional_merc[idxDep]
-        elif DepType == "Major":
-            latDep_deg = self.lat_major_deg[idxDep]
-            lonDep_deg = self.lon_major_deg[idxDep]
-            latDep_merc = self.lat_major_merc[idxDep]
-            lonDep_merc = self.lon_major_merc[idxDep]
-        elif DepType == "Heliport":
-            latDep_deg = self.lat_heliports_deg[idxDep]
-            lonDep_deg = self.lon_heliports_deg[idxDep]
-            latDep_merc = self.lat_heliports_merc[idxDep]
-            lonDep_merc = self.lon_heliports_merc[idxDep]
-        
-        if ArrType == "Regional":
-            latArr_deg = self.lat_regional_deg[idxArr]
-            lonArr_deg = self.lon_regional_deg[idxArr]
-            latArr_merc = self.lat_regional_merc[idxArr]
-            lonArr_merc = self.lon_regional_merc[idxArr]
-        elif ArrType == "Major":
-            latArr_deg = self.lat_major_deg[idxArr]
-            lonArr_deg = self.lon_major_deg[idxArr]
-            latArr_merc = self.lat_major_merc[idxArr]
-            lonArr_merc = self.lon_major_merc[idxArr]
-        elif ArrType == "Heliport":
-            latArr_deg = self.lat_heliports_deg[idxArr]
-            lonArr_deg = self.lon_heliports_deg[idxArr]
-            latArr_merc = self.lat_heliports_merc[idxArr]
-            lonArr_merc = self.lon_heliports_merc[idxArr]
-        
-        geodesicDistance = self.GeodesicDistance(latDep_deg, lonDep_deg, latArr_deg, lonArr_deg)
-        self.tripDistance = geodesicDistance
-        print(f'Geodesic Trip Distance between {idxDep} - {idxArr}: {geodesicDistance} miles')
-        
-        # CREATES AN ARRAY OF LAT, LON COORDINATES BETWEEN WAYPOINTS FOR PLOTTING ON BOKEH TILEMAPS
-        Lat, Lon, TripHeading = self.WaypointsConnector((latDep_merc, lonDep_merc),(latArr_merc, lonArr_merc),500)
-        Lat_deg, Lon_deg, TripHeading_deg = self.WaypointsConnector((latDep_deg, lonDep_deg),(latArr_deg, lonArr_deg),500)
-
-        self.p.line(Lat, Lon, color = 'white', line_width = 2)
-        
-        # # Find the angle of the slope relative to the North
-        # TripHeading = math.atan(1/delta) * 180/math.pi
-        print(f'Heading Angle is {TripHeading} deg')
-        self.triphead = TripHeading
-        
-        # Rotate the reachability footprint based on the trip heading angle
-        if TripHeading < 0:
-            teta = 2*np.pi + TripHeading*np.pi/180
-        else:
-            teta = 2*np.pi + TripHeading*np.pi/180
-        
-        X_new = []
-        Y_new = []
-        
-        for i in range(len(X)):
-            X_new.append((X[i]*np.cos(teta) - Y[i]*np.sin(teta)) * 5000/3730)
-            Y_new.append((X[i]*np.sin(teta) + Y[i]*np.cos(teta)) * 5000/3730)
-        
-        self.X = X_new
-        self.Y = Y_new
-        
-        # # Use the linear function equation to define the time steps, in mercator coordinates
-        # Lon = np.linspace(lonDep_merc, lonArr_merc, sampSize) 
-        # Lat = (delta * (Lon - lonDep_merc) + latDep_merc)
-        # self.p.line(Lat, Lon, color = 'white', line_width = 2)
-        
-        # # same thing as above, but this is in degrees
-        # delta_deg = (latArr_deg-latDep_deg)/(lonArr_deg-lonDep_deg)
-        # Lon_deg = np.linspace(lonDep_deg, lonArr_deg, sampSize) 
-        # Lat_deg = (delta_deg * (Lon_deg - lonDep_deg) + latDep_deg)
-        # Lat_deg, Lon_deg, TripHeading_deg = self.WaypointsConnector((latDep_deg, lonDep_deg),(latArr_deg, lonArr_deg),500)
-
-        # plot the reachable radius along the trip
-        
-        DistanceLinspace = np.linspace(0,geodesicDistance,sampSize)
-        
-        for j in range(len(Lat)):
-            LAT_DEG = []
-            LON_DEG = []
-            DIST = []
-            for i in range(len(X)):
-                lat_deg, lon_deg = self.Mercator2Degrees((Lat[j]+Y_new[i]),(Lon[j]-X_new[i]))
-                #print(Lat_deg[j], Lon_deg[j], lat_deg, lon_deg)
-                DST = self.GeodesicDistance(Lat_deg[j], Lon_deg[j], lat_deg, lon_deg)
-                LAT_DEG.append(lat_deg)
-                LON_DEG.append(lon_deg)
-                DIST.append(DST)
-                            
-            if j % 100 == 10000:
-                self.p.circle(Lat[j], Lon[j], color = 'yellow', alpha = 1, size = 3)
-                #self.p.ellipse(Lat[j],Lon[j], alpha = 0.3, width=width, height=width, color="white")
-                self.p.patch(Lat[j]*np.ones(len(Y))+Y_new, Lon[j]*np.ones(len(X))-X_new, alpha = 0.3, color="white")
-                if False:
-                    self.SaveMap(Lon, Lat, j, Lat[j], Lon[j], Lat[j]*np.ones(len(Y))+Y_new, Lon[j]*np.ones(len(X))-X_new )
-        plt.show()
-            
-        # Here, find the closest contingency UAM aerodrome from a vehicle's current position
-        Distance2ClosestContingencySite = []
-        Labeling = []
-        Direction = [] # finds the direction of the closest contingency landing site relative to Northward reference
-        
-        for j in range(len(Lat)): # j represents the each step of the vehicle along the path
-            Distance2ContingencySite_Regional_Airport = [] # array containing distance from current position to the regional airports
-            Distance2ContingencySite_Major_Airport = [] # array containing distance from current position to the major airports
-            Distance2ContingencySite_Heliport = [] # array containing distance from current position to the heliports
-
-            for k in range(len(self.lat_regional_deg)): # k represents each location index of regional airport
-                Distance2ContingencySite_Regional_Airport.append(self.GeodesicDistance(Lat_deg[j], Lon_deg[j], self.lat_regional_deg[k], self.lon_regional_deg[k])) # in miles
-            
-            for l in range(len(self.lat_heliports_deg)): # l represents each location index of heliports
-                Distance2ContingencySite_Heliport.append(self.GeodesicDistance(Lat_deg[j], Lon_deg[j], self.lat_heliports_deg[l], self.lon_heliports_deg[l])) # in miles
-            
-            for m in range(len(self.lat_major_deg)): # m represents each location index of major airport
-                Distance2ContingencySite_Major_Airport.append(self.GeodesicDistance(Lat_deg[j], Lon_deg[j], self.lat_major_deg[m], self.lon_major_deg[m])) # in miles    
-            
-            # find the closest of [regional, heliport, major] to the current location
-            minOfAll = [min(Distance2ContingencySite_Regional_Airport), min(Distance2ContingencySite_Heliport), min(Distance2ContingencySite_Major_Airport)]
-            
-            Distance2ClosestContingencySite.append(min(minOfAll)) # find the closest one at the current location
-            indexMin = minOfAll.index(min(minOfAll)) # find the index: 0 - regional, 1 - heliport, 2 - major airport
-            Labeling.append(int(indexMin)) 
-            
-            # find the direction of the closest contingency landing site relative to North Pole reference
-            if int(indexMin) == 0: # if regional airport
-                idx = Distance2ContingencySite_Regional_Airport.index(min(minOfAll))
-                deltaLat = self.lat_regional_deg[idx] - Lat_deg[j]
-                deltaLon = self.lon_regional_deg[idx] - Lon_deg[j]
-                
-            elif int(indexMin) == 1: # if heliport
-                idx = Distance2ContingencySite_Heliport.index(min(minOfAll))
-                deltaLat = self.lat_heliports_deg[idx] - Lat_deg[j]
-                deltaLon = self.lon_heliports_deg[idx] - Lon_deg[j]
-                
-            elif int(indexMin) == 2: # if major airport
-                idx = Distance2ContingencySite_Major_Airport.index(min(minOfAll))
-                deltaLat = self.lat_major_deg[idx] - Lat_deg[j]
-                deltaLon = self.lon_major_deg[idx] - Lon_deg[j]
-            
-            if deltaLon >= 0 and deltaLat >= 0: # the first quadrant
-                if deltaLon == 0 and deltaLat == 0:
-                    directionAngle_rad = 0
-                    directionAngle_deg = 0
-                    Direction.append(directionAngle_deg)
-                else:
-                    directionAngle_rad = math.atan(deltaLon/deltaLat)
-                    directionAngle_deg = directionAngle_rad * 180 / math.pi
-                    Direction.append(directionAngle_deg)
-            elif deltaLon < 0 and deltaLat >= 0: # the second quadrant
-                directionAngle_rad = 2 * math.pi + math.atan(deltaLon/deltaLat)
-                directionAngle_deg = directionAngle_rad * 180 / math.pi
-                Direction.append(directionAngle_deg)
-            elif deltaLon > 0 and deltaLat < 0: # the fourth quadrant
-                directionAngle_rad = math.pi + math.atan(deltaLon/deltaLat)
-                directionAngle_deg = directionAngle_rad * 180 / math.pi
-                Direction.append(directionAngle_deg)
-            elif deltaLon < 0 and deltaLat < 0: # the third quadrant
-                directionAngle_rad = math.atan(deltaLon/deltaLat) + math.pi
-                directionAngle_deg = directionAngle_rad * 180 / math.pi
-                Direction.append(directionAngle_deg)
-            elif deltaLon == 0 and deltaLat > 0:
-                directionAngle_rad = math.pi / 2
-                directionAngle_deg = directionAngle_rad * 180 / math.pi
-                Direction.append(directionAngle_deg)
-            elif deltaLon == 0 and deltaLat < 0:
-                directionAngle_rad = 2 * math.pi - (math.pi / 2)
-                directionAngle_deg = directionAngle_rad * 180 / math.pi
-                Direction.append(directionAngle_deg)
-                
-        #print(f'Distance to the closest contingency site is (in miles): {Distance2ClosestContingencySite}')
-        #print(Labeling)
-        
-        # Check if any of the closest contingency landing locations along the route fall within the reachable footprint
+    def ComputeCLAP(self, X_newArray, Y_newArray, Distance2ClosestContingencySite, Direction): # Contingency Landing Assurance Percentage
         counter = 0 # count how many times the aircraft reachable footprint is outside the contingency landing sites
+        sampSize = len(self.LatArrayforAllWaypoints_inMerc_flattened)
+        
         for i in range(sampSize): # i represents each step along the route
             distShape = []
             footprintRadial = []
-            for k in range(len(X)): # k represents each point in reachable footprint
-                lat_deg, lon_deg = self.Mercator2Degrees((Lat[i]+Y_new[k]),(Lon[i]-X_new[k]))
-                distS = self.GeodesicDistance(Lat_deg[i], Lon_deg[i], lat_deg, lon_deg) 
-                distShape.append(distS)
-                
-                if (lon_deg - Lon_deg[i]) >= 0 and (lat_deg - Lat_deg[i]) >= 0:
-                    footprintradial = math.atan((lon_deg - Lon_deg[i])/(lat_deg - Lat_deg[i]))
-                elif (lon_deg - Lon_deg[i]) > 0 and (lat_deg - Lat_deg[i]) < 0:
-                    footprintradial = math.pi + math.atan((lon_deg - Lon_deg[i])/(lat_deg - Lat_deg[i]))
-                elif (lon_deg - Lon_deg[i]) < 0 and (lat_deg - Lat_deg[i]) < 0:
-                    footprintradial = math.pi + math.atan((lon_deg - Lon_deg[i])/(lat_deg - Lat_deg[i]))
-                elif (lon_deg - Lon_deg[i]) < 0 and (lat_deg - Lat_deg[i]) > 0:
-                    footprintradial = 2 * math.pi + math.atan((lon_deg - Lon_deg[i])/(lat_deg - Lat_deg[i]))
-                
-                footprintRadial.append(footprintradial)
             
-            n = Direction[i]
-            # find out which angle in the footprint the direction of contingency landing site closely matches
-            footprintRadial = np.multiply(180 / math.pi, footprintRadial) # convert radians to degrees
-            # subtract n degree from footprintRadial and find the minimum value and index
-            subtraction1 = np.subtract(footprintRadial,n)
-            # find the minimum of the subtraction and its index
-            IndxMin = np.where(subtraction1 == min(subtraction1))
-            IndxMin = int(IndxMin[0])
-            # use the index value to find the angle in footprintRadial that is closest to it
-            ClosestFootPrintRadial = footprintRadial[IndxMin]
-            # also find the distance of that from distShape
-            distanceOfClosestFootprintRadial = distShape[IndxMin]
-            # compare this distance to the landing site distance
-            # if this distance is less than landing site distance, increase counter by 1
-            # meaning landing site is outside the reachable footprint
-            #print(Distance2ClosestContingencySite[i], distS)
-            if Distance2ClosestContingencySite[i] >= distanceOfClosestFootprintRadial:
-                if Labeling[i] == 0 or Labeling[i] == 2:
-                    counter += 1
-               
+            X_new = X_newArray[i]
+            Y_new = Y_newArray[i]
+            Lat_inMerc = self.LatArrayforAllWaypoints_inMerc_flattened[i]
+            Lon_inMerc = self.LonArrayforAllWaypoints_inMerc_flattened[i]
+            Lat_inDeg = self.LatArrayforAllWaypoints_inDeg_flattened[i]
+            Lon_inDeg = self.LonArrayforAllWaypoints_inDeg_flattened[i]
+            
+            try:
+                for k in range(len(X_new)): # k represents each point in reachable footprint
+                    lat_deg, lon_deg = self.Mercator2Degrees((Lat_inMerc+Y_new[k]),(Lon_inMerc-X_new[k]))
+                    distS = self.GeodesicDistance(Lat_inDeg, Lon_inDeg, lat_deg, lon_deg) 
+                    distShape.append(distS)
+                    
+                    if (lon_deg - Lon_inDeg) >= 0 and (lat_deg - Lat_inDeg) >= 0:
+                        footprintradial = math.atan((lon_deg - Lon_inDeg)/(lat_deg - Lat_inDeg))
+                    elif (lon_deg - Lon_inDeg) > 0 and (lat_deg - Lat_inDeg) < 0:
+                        footprintradial = math.pi + math.atan((lon_deg - Lon_inDeg)/(lat_deg - Lat_inDeg))
+                    elif (lon_deg - Lon_inDeg) < 0 and (lat_deg - Lat_inDeg) < 0:
+                        footprintradial = math.pi + math.atan((lon_deg - Lon_inDeg)/(lat_deg - Lat_inDeg))
+                    elif (lon_deg - Lon_inDeg) < 0 and (lat_deg - Lat_inDeg) > 0:
+                        footprintradial = 2 * math.pi + math.atan((lon_deg - Lon_inDeg)/(lat_deg - Lat_inDeg))
+                        
+                    footprintRadial.append(footprintradial)
+                
+                n = Direction[i]
+                # find out which angle in the footprint the direction of contingency landing site closely matches
+                footprintRadial = np.multiply(180 / math.pi, footprintRadial) # convert radians to degrees
+                # subtract n degree from footprintRadial and find the minimum value and index
+                subtraction1 = np.subtract(footprintRadial,n)
+                # find the minimum of the subtraction and its index
+                IndxMin = np.where(subtraction1 == min(subtraction1))
+                IndxMin = int(IndxMin[0])
+                # use the index value to find the angle in footprintRadial that is closest to it
+                ClosestFootPrintRadial = footprintRadial[IndxMin]
+                # also find the distance of that from distShape
+                distanceOfClosestFootprintRadial = distShape[IndxMin]
+                # compare this distance to the landing site distance
+                # if this distance is less than landing site distance, increase counter by 1
+                # meaning landing site is outside the reachable footprint
+                #print(Distance2ClosestContingencySite[i], distS)
+                if Distance2ClosestContingencySite[i] >= distanceOfClosestFootprintRadial:
+                    if Labeling[i] == 0 or Labeling[i] == 2:
+                        counter += 1
+            except:
+                counter += 1
                 
         # print(counter)           
         print(f'Percentage of trip that is outside the distance requirement: {100*counter/sampSize} %')
         self.CLAP = 100*counter/sampSize
-        
-        fig, (ax1, ax2, ax3) = plt.subplots(3,1)
-        fig.set_size_inches(8, 16)
-        ax1.plot(DistanceLinspace, Distance2ClosestContingencySite, label="Flight Path")
-        #plt.plot(DistanceLinspace, [glideDistance]*sampSize, 'r--', label="Threshold Line")
-        ax1.set_xlabel("Trip Length Completed [miles]")
-        ax1.set_ylabel("Closest Contingency Landing Site Distance [miles]")
-        ax1.grid()
-
-        #plt.figure(figsize=(8,5))
-        ax2.plot(DistanceLinspace, Labeling, 'r-', label="Threshold Line")
-        ax2.set_xlabel("Trip Length Completed [miles]")
-        ax2.set_label("Closest Contingency Landing Site Distance [miles]")
-        ax2.set_yticks([0,1,2])
-        ax2.set_yticklabels(['Regional', 'Heliport', 'Major'])
-        ax2.grid()
-
-        
-        #plt.figure(figsize=(8,5)) [0:sampSize-2]
-        ax3.plot(DistanceLinspace, Direction, 'r-', label="Threshold Line")
-        ax3.set_xlabel("Trip Length Completed [miles]")
-        ax3.set_ylabel("Heading Direction [degrees]")
-        ax3.set_title("Direction of Contingency Landing Site Rel. To North")
-        ax3.grid()
-
-        plt.savefig('C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/HeadingDirectionVsTripLength.png', dpi=300)
-        return (Distance2ClosestContingencySite, Direction, Labeling)
     
     def WaypointsConnector(self,LatLonFrom_merc, LatLonTo_merc, sampSize):
         # EXTRACT COORDINATES FROM THE TUPLES
