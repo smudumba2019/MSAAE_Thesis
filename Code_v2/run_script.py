@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 def RunScript(Option, SaveMap = False, GenerateMapVideo = False, GeneratePolarPlotVideo = False):
     if Option == 1: # IF YOU WANT TO PLOT FOR A SPECIFIC CRUISING ALTITUDE, RUN THIS CODE
-        PlotMultipleTrips(3280, True) # input is the cruising altitude in ft
+        PlotMultipleTrips(2750, True, False) # input is the cruising altitude in ft
     elif Option == 2: # IF YOU WANT TO PLOT CLAP VS ALTITUDE, RUN THIS CODE
         altitude, CLAP = PlotCLAP()
     else:
@@ -49,7 +49,8 @@ def RunScript(Option, SaveMap = False, GenerateMapVideo = False, GeneratePolarPl
         return (altitude, CLAP)
     except:
         return None
-RunScript(2, GenerateMapVideo = False, GeneratePolarPlotVideo = False)
+
+RunScript(1, GenerateMapVideo = False, GeneratePolarPlotVideo = False)
 
 
 # altitudeD, CLAPD = RunScript(2, GenerateMapVideo = False, GeneratePolarPlotVideo = False)

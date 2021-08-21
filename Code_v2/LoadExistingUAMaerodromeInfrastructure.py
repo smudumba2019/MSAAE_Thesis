@@ -43,11 +43,13 @@ class LoadExistingUAMaerodromeInfrastructure:
         self.lat_regional_merc, self.lon_regional_merc = self.ReadExcelSheetInMercatorOnly(self.FilePath, "Regional")
         self.lat_major_merc, self.lon_major_merc = self.ReadExcelSheetInMercatorOnly(self.FilePath, "Major")
         self.lat_heliports_merc, self.lon_heliports_merc = self.ReadExcelSheetInMercatorOnly(self.FilePath, "Heliports")
-        
+        self.lat_golfcourses_merc, self.lon_golfcourses_merc = self.ReadExcelSheetInMercatorOnly(self.FilePath, "GolfCourses")
+
         self.lat_regional_deg, self.lon_regional_deg = self.ReadExcelSheetInDegreesOnly(self.FilePath, "Regional")
         self.lat_major_deg, self.lon_major_deg = self.ReadExcelSheetInDegreesOnly(self.FilePath, "Major")
         self.lat_heliports_deg, self.lon_heliports_deg = self.ReadExcelSheetInDegreesOnly(self.FilePath, "Heliports")
-
+        self.lat_golfcourses_deg, self.lon_golfcoursess_deg = self.ReadExcelSheetInDegreesOnly(self.FilePath, "GolfCourses")        
+        
     def ReadExcelSheetInMercatorOnly(self, FilePath, SheetName):
         loadSheet = pd.read_excel(FilePath, sheet_name = SheetName)
         lat_deg = loadSheet["LatD"]

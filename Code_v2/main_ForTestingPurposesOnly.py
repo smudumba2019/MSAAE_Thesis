@@ -13,7 +13,7 @@ from PlotInPolarCoordinates import *
 import numpy as np
 
 
-def PlotMultipleTrips(cruiseAltitudeInFeet, Show = False):
+def PlotMultipleTrips(cruiseAltitudeInFeet, Show = True, Save = False):
     Chicago = TripMapper("Chicago","Satellite") # options for 2nd input either "Satellite" or "Map"
     Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
     X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(cruiseAltitudeInFeet,45,0)
@@ -23,16 +23,21 @@ def PlotMultipleTrips(cruiseAltitudeInFeet, Show = False):
     depType = "Regional"
     arrType = "Heliport"
     
+    
     """
     DEFINE WAYPOINTS HERE, MANUALLY, FOR NOW
     """
     lonWP_inDeg = [-88.02517, -87.81231]#[-88.10121, -87.9838, -87.89202] #(lonDep_deg + lonArr_deg) / 2
     latWP_inDeg = [41.93893, 41.91313]#[41.96701,41.9642, 41.91506] #(latDep_deg + latArr_deg) / 2
-    # lonWP_inDeg = []#[-88.10121, -87.9838, -87.89202] #(lonDep_deg + lonArr_deg) / 2
-    # latWP_inDeg = []#[41.96701,41.9642, 41.91506]
-    WayPoints = [lonWP_inDeg, latWP_inDeg]
-    Chicago.DrawNonDirectRoutingTrip(depType, arrType, dep,arr, Joby, cruiseAltitudeInFeet, WayPoints, Save=False)
+    lonWP_inDeg = [-88.10121, -87.9838, -87.89202] #(lonDep_deg + lonArr_deg) / 2
+    latWP_inDeg = [41.96701,41.9642, 41.91506]
     
+    # TripD = Chicago.TripDistance(depType,arrType,dep,arr)  # in miles      
+    WayPoints = [lonWP_inDeg, latWP_inDeg]
+    FP1, Heading, TripDistanceNonDirectRoute, distance, direction, aerodromeType = Chicago.DrawNonDirectRoutingTrip(depType, arrType, dep,arr, Joby, cruiseAltitudeInFeet, WayPoints, Save=Save)
+    
+    # PlotPolar(Joby, FP1, cruiseAltitudeInFeet, Heading, TripDistanceNonDirectRoute, distance, direction, aerodromeType)
+   
     # lonWP_inDeg = []#[-88.10121, -87.9838, -87.89202] #(lonDep_deg + lonArr_deg) / 2
     # latWP_inDeg = []#[41.96701,41.9642, 41.91506] #(latDep_deg + latArr_deg) / 2
     # # lonWP_inDeg = []#[-88.10121, -87.9838, -87.89202] #(lonDep_deg + lonArr_deg) / 2
@@ -74,6 +79,61 @@ def PlotCLAP():
     
     return (altitude, CLAP)
 # PlotMultipleTrips()
+
+# PLOT IN POLAR COORDINATES
+def PlotPolar(Joby, FP1, cruiseAltitudeInFeet, Heading, TripD, distance, direction, aerodromeType):
+    """
+    COMPASS PLOT GENERATION (I.E., POLAR PLOT)
+    """
+    # https://chartio.com/resources/tutorials/how-to-save-a-plot-to-a-file-using-matplotlib/
+    # https://www.kite.com/python/answers/how-to-add-leading-zeros-to-a-number-in-python
+    # https://matplotlib.org/stable/api/projections_api.html
+    # https://stackoverflow.com/questions/16085397/changing-labels-in-matplotlib-polar-plot
+    TripDistanceArray = np.linspace(0,TripD,len(distance)-1) # an array of the trip route in miles
+    for t in range(len(distance)-1): 
+        # fig, ax = PlotInPolarCoordinates(distance[t:t+1], direction[t:t+1], teta, r)
+        TripHeading = Heading[t] * math.pi/180
+
+        # Account for takeoff, climb, descend, land changes in altitude footprint
+        if TripDistanceArray[t] <= (0.621371*FP1.dx/1000) or TripDistanceArray[t] >= TripD - (0.621371*(FP1.dx)/1000):
+            x_altitude, z = FP1.GivenRangeOutputAltitude(TripDistanceArray[t]) # z is in meters
+            z = z * 3.28084 # in ft
+            X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(z,45,0)
+            FootprintDistance = FootprintDistance * 0.621371 # km to miles
+            altitude_ft = z
+        else:
+            altitude_ft = cruiseAltitudeInFeet
+            X, Y, Radial, FootprintDistance = Joby.ReachableGroundFootprint(cruiseAltitudeInFeet,45,0)
+            FootprintDistance = FootprintDistance * 0.621371 # km to miles
+        
+        # Rotate the footprint to match the heading direction
+        Radial_Rotated = Radial + (np.ones(len(Radial))*TripHeading)
+        fig, ax = PlotInPolarCoordinates(distance[t:t+1], direction[t:t+1])
+        ax.plot(Radial_Rotated,FootprintDistance)
+    
+        if aerodromeType[t] == 0: # if regional airport
+            colorTarget = 'ro'
+            label = "Regional Airport"
+        elif aerodromeType[t] == 1: # if heliport
+            colorTarget = 'yo'
+            label = "Heliport"
+        elif aerodromeType[t] == 2:
+            colorTarget = 'bo'
+            label = "Major Airport"
+        
+        ax.plot(direction[t]*math.pi/180, distance[t],colorTarget,label=label)
+        
+        ax.set_theta_direction(-1) # CW direction 
+        #ax.set_theta_zero_location('N')
+        ax.set_theta_offset(math.pi/2)
+        # ax.set_theta_offset(math.pi/2 + Heading[t]*math.pi/180)
+        ax.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
+        ax.set_title("Reachable Ground Footprint (miles) \n of Joby-like S4 eVTOL Vehicles under Gliding Conditions\n Altitude (ft): " + str(round(altitude_ft,0)) + " Trip Completion Percentage: " + str(round(100*TripDistanceArray[t]/TripD,0)) +" %" )
+        ax.legend(loc='lower right',bbox_to_anchor=(1, 0))
+        plt.tight_layout()
+        number_str = str(t)
+        plt.savefig('C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/Compass/step' + number_str.zfill(4) + '.png', dpi=300)
+        
 
 
 ##################################################################

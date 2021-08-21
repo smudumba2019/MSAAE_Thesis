@@ -64,6 +64,8 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
             p.square(self.lat_regional_merc, self.lon_regional_merc, color = 'white', line_color="black", line_width=2, alpha = 1, size = 18)
             p.triangle(self.lat_major_merc, self.lon_major_merc, color = 'red', line_color="black", alpha = 1,line_width=2, size = 18)
             p.circle(self.lat_heliports_merc, self.lon_heliports_merc, color = 'yellow', line_color="black", line_width=2, alpha = 1, size = 18)
+            p.triangle(self.lat_golfcourses_merc, self.lon_golfcourses_merc, color = 'yellowgreen', line_color="black", line_width=2, alpha = 1, size = 18)
+        
         elif self.MapType == "Map":
             tile_provider = get_provider(Vendors.OSM)
             p = figure(x_range=(-9780000-100000, -9745000+100000), y_range=(5130000, 5160000),x_axis_type="mercator", y_axis_type="mercator", title="Chicago Metropolitan Area", plot_width=1875, plot_height=910)
@@ -139,9 +141,11 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         self.tripDistance = geodesicDistance
         print(f'Geodesic Trip Distance between {DepType} {idxDep} - {ArrType} {idxArr}: {geodesicDistance} miles')
         
-        # DEFINE WAYPOINTS
+        # DEFINE WAYPOINTS IN DEGREES
         LatWaypoints_inDeg = [latDep_deg, latArr_deg]
         LonWaypoints_inDeg = [lonDep_deg, lonArr_deg]
+        
+        # DEFINE WAYPOINTS IN MERCATOR        
         LatWaypoints_inMerc = [latDep_merc, latArr_merc]
         LonWaypoints_inMerc = [lonDep_merc, lonArr_merc]
         
@@ -175,7 +179,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         TripDistanceNonDirectRouteLargerArray = []
         
         for l in range(len(LonWaypoints_inMerc)-1):
-            Lat_inDeg, Lon_inDeg, TripHeading_deg = self.WaypointsConnector((LatWaypoints_inDeg[l], LonWaypoints_inDeg[l]),(LatWaypoints_inDeg[l+1], LonWaypoints_inDeg[l+1]),1000)
+            Lat_inDeg, Lon_inDeg, TripHeading_deg = self.WaypointsConnector((LatWaypoints_inDeg[l], LonWaypoints_inDeg[l]),(LatWaypoints_inDeg[l+1], LonWaypoints_inDeg[l+1]),50)
             LatArrayforAllWaypoints_inDeg.append(Lat_inDeg)
             LonArrayforAllWaypoints_inDeg.append(Lon_inDeg)
             
@@ -198,7 +202,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         self.LonArrayforAllWaypoints_inMerc_flattened = LonArrayforAllWaypoints_inMerc
         
         self.TripHeadingLargerArray = list(chain.from_iterable(TripHeadingLargerArray))
-        
+
         TripDistanceNonDirectRoute = sum(TripDistanceNonDirectRouteArray)
         print(f'Length of Each Flight Segment (miles): {TripDistanceNonDirectRouteArray}')
         self.TripDistanceNonDirectRoute = TripDistanceNonDirectRoute
@@ -242,12 +246,13 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
             X_new, Y_new = self.RotateReachableFootprintByTripHeading(X, Y, self.TripHeadingLargerArray[m])
             X_newArray.append(X_new)
             Y_newArray.append(Y_new)
-            if m % 5 == 1:
+            if m % 1 == 0:
                 self.PlotReachableRadiusAlongRoute(self.LatArrayforAllWaypoints_inDeg_flattened[m], self.LonArrayforAllWaypoints_inDeg_flattened[m], X_new, Y_new, Save=(Save,m))
             
         # FIND CLAP
         self.ComputeCLAP(X_newArray, Y_newArray, Distance2ClosestContingencySite, Direction)
-            
+        return (FP1, list(chain.from_iterable(TripHeadingLargerArray)), TripDistanceNonDirectRoute, Distance2ClosestContingencySite, Direction, Labeling)     
+    
     def PlotFlightProfiles(self,Aircraft,CruiseAltitudeInFeet):
         font = {'family': 'serif',
         'color':  'darkred',
