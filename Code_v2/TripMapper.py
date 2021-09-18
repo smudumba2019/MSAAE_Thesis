@@ -64,7 +64,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
             p.square(self.lat_regional_merc, self.lon_regional_merc, color = 'white', line_color="black", line_width=2, alpha = 1, size = 18)
             p.triangle(self.lat_major_merc, self.lon_major_merc, color = 'red', line_color="black", alpha = 1,line_width=2, size = 18)
             p.circle(self.lat_heliports_merc, self.lon_heliports_merc, color = 'yellow', line_color="black", line_width=2, alpha = 1, size = 18)
-            p.triangle(self.lat_golfcourses_merc, self.lon_golfcourses_merc, color = 'yellowgreen', line_color="black", line_width=2, alpha = 1, size = 18)
+            # p.triangle(self.lat_golfcourses_merc, self.lon_golfcourses_merc, color = 'yellowgreen', line_color="black", line_width=2, alpha = 1, size = 18)
         
         elif self.MapType == "Map":
             tile_provider = get_provider(Vendors.OSM)
@@ -73,6 +73,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
             p.square(self.lat_regional_merc, self.lon_regional_merc, color = 'white', line_color="black", line_width=2, alpha = 1, size = 20)
             p.triangle(self.lat_major_merc, self.lon_major_merc, color = 'red', line_color="black", alpha = 1,line_width=2, size = 20)
             p.circle(self.lat_heliports_merc, self.lon_heliports_merc, color = 'yellow', line_color="black", line_width=2, alpha = 1, size = 20)
+            p.triangle(self.lat_golfcourses_merc, self.lon_golfcourses_merc, color = 'yellowgreen', line_color="black", line_width=2, alpha = 1, size = 18)
         return p
     
     def TripDistance(self, DepType, ArrType, idxDep, idxArr):
@@ -179,7 +180,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         TripDistanceNonDirectRouteLargerArray = []
         
         for l in range(len(LonWaypoints_inMerc)-1):
-            Lat_inDeg, Lon_inDeg, TripHeading_deg = self.WaypointsConnector((LatWaypoints_inDeg[l], LonWaypoints_inDeg[l]),(LatWaypoints_inDeg[l+1], LonWaypoints_inDeg[l+1]),50)
+            Lat_inDeg, Lon_inDeg, TripHeading_deg = self.WaypointsConnector((LatWaypoints_inDeg[l], LonWaypoints_inDeg[l]),(LatWaypoints_inDeg[l+1], LonWaypoints_inDeg[l+1]),500)
             LatArrayforAllWaypoints_inDeg.append(Lat_inDeg)
             LonArrayforAllWaypoints_inDeg.append(Lon_inDeg)
             
@@ -405,7 +406,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
     def PlotReachableRadiusAlongRoute(self, Lat, Lon, X_new, Y_new, Save):
         Lat, Lon = self.Degrees2Mercator((Lat, Lon))
         self.p.circle(Lat, Lon, color = 'black', alpha = 1, size = 3)
-        self.p.patch(Lat*np.ones(len(Y_new))+Y_new, Lon*np.ones(len(X_new))-X_new, alpha = 0.0003, color="white")
+        self.p.patch(Lat*np.ones(len(Y_new))+Y_new, Lon*np.ones(len(X_new))-X_new, alpha = 0.00003, color="white")
         if Save[0] == True:
             self.SaveMap(Lat, Lon, Save[1], Lat*np.ones(len(Y_new))+Y_new, Lon*np.ones(len(X_new))-X_new)
         return None
@@ -531,7 +532,7 @@ class TripMapper(LoadExistingUAMaerodromeInfrastructure):
         q = self.MapperInfrastructure()
         q.line(self.LatArrayforAllWaypoints_inMerc_flattened, self.LonArrayforAllWaypoints_inMerc_flattened, color = 'white', line_width = 2)
         q.circle(Lat, Lon, color = 'yellow', alpha = 1, size = 3)
-        q.patch(PatchLatj, PatchLonj, alpha = 0.3, color="white")
+        q.patch(PatchLatj, PatchLonj, alpha = 0.3, color="white") # not this one
         number_str = str(imgNum)
         # output_file("C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png")
         filename="C:/Users/Sai Mudumba/Documents/MSAAE_Thesis_Code/Images/TripAnimation/test" + number_str.zfill(4) + ".png"

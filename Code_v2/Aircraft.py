@@ -9,6 +9,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
+from shapely.geometry import Polygon
 
 class Aircraft:
     def __init__(self, ACname, PAX, Speed_Cr, Range, LD_Ratio, Max_Flt_Time, MTOW, KWh_Batt, S):
@@ -35,7 +36,7 @@ class Aircraft:
         print(f"Endurance (minutes): {self.maxFltTime}")
         print(f"Maximum Takeoff Weight (kg): {self.MTOW}")
         print(f"Battery Capacity (kWh): {self.kWhBatt}")
-        print(f"Wing Surface Area (m^3): {self.S}")
+        print(f"Wing Surface Area (m^2): {self.S}")
       
     def ReachableGroundFootprint(self, altitude, mu_deg, PowFailure):
         alt = altitude * 0.3048 # cruising altitude in meters
@@ -214,12 +215,64 @@ class Aircraft:
         angle = angle * math.pi / 180
         return angle
         # TurnRadius = (speed ** 2) * math.cos(gamma) / (g * math.tan(mu))
-        
+    
+    def EstimateGlideRateOfDescent(self):
+        speed = self.cruiseSpeed # cruising speed in mph
+        speed = speed * 0.44704 # converting mph to m/s
+        CL = 2 * (self.MTOW * self.g) / (self.rho * self.S * speed ** 2)
+        ROD_glide = math.sqrt((self.MTOW * self.g) / (0.5 * self.rho * self.S * CL)) * (1/self.LDratio)
+        return ROD_glide
+    
+    def EstimateAltitudeDropInGlide(self,altitude, startle_delay):
+        altitude = 0.3048 * altitude # feet to meters
+        ROD_glide = self.EstimateGlideRateOfDescent()
+        final_altitude = altitude - (startle_delay * ROD_glide)
+        final_altitude = 3.28084 * final_altitude # meters to feet
+        return (final_altitude)
 
         
 # JobyS4 = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 254.4, S=10.7*1.7)
 # JobyS4.Characteristics()
-# JobyS4.ReachableGroundFootprint(100,35,0)
+# """
+# Determine the Reachable Footprint and Estimate its Footprint Area
+# """
+# X, Y, ETA, DistanceRadial = JobyS4.ReachableGroundFootprint(1500,35,0)
+# RGF_Area_Ref = Polygon(zip(X, Y)) # Assuming the OP's x,y coordinates
+# RGF_Area_Ref = RGF_Area_Ref.area/(1000**2) # in km^2
+# print(f"The Reachable Ground Footprint (RGF) Area for 1500 ft cruising altitude is: {RGF_Area_Ref} km^2")
+# plt.plot(X,Y)
+# plt.show()
+# """
+# Estimate the altitude loss in the case of a delayed response to emergency power failure case.
+# """
+# AltitudeLoss = []
+# Loss_RGF_Area = []
+# PercentLoss_RGF_Area = []
+# timeDelay = range(0,10,1)
+
+# for t in timeDelay:
+#     AltitudeDrop = JobyS4.EstimateAltitudeDropInGlide(1500,t)
+#     AltitudeLoss.append(AltitudeDrop - 1500)
+    
+#     X, Y, ETA, DistanceRadial = JobyS4.ReachableGroundFootprint(AltitudeDrop,35,0)
+#     RGF_Area = Polygon(zip(X, Y)) # Assuming the OP's x,y coordinates
+#     RGF_Area = RGF_Area.area/(1000**2)
+#     Loss_RGF_Area.append(RGF_Area)
+    
+#     Percent_Loss_Of_RGB_Area = -100 * (RGF_Area - RGF_Area_Ref) / RGF_Area_Ref
+#     PercentLoss_RGF_Area.append(Percent_Loss_Of_RGB_Area)    
+    
+#     # plt.plot(X,Y)
+#     # plt.show()
+    
+# plt.plot(timeDelay, PercentLoss_RGF_Area)
+# plt.show()
+
+# plt.plot(timeDelay, Loss_RGF_Area)
+# plt.show()
+
+# print(AltitudeLoss)
+# print(PercentLoss_RGF_Area)
 
 # Lilium7 = Aircraft("Joby", 7, 186, 186, 16.3, 60, 1700, 187.8, S=10.7*1.7)
 # Lilium7.Characteristics()

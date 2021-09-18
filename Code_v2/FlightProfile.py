@@ -126,17 +126,81 @@ class FlightProfile:
         print(f'Rate of Climb: {self.ROC} m/s and Climb Angle: {self.climbAngle*180/math.pi} deg')
 
         
-# font = {'family': 'serif',
-#         'color':  'darkred',
+# fontA = {'family': 'serif',
+#         'color':  'blue',
 #         'weight': 'normal',
 #         'size': 12,
 #         }
-# fig, ax = plt.subplots(figsize = (8, 5),dpi=300)
+# fontB = {'family': 'serif',
+#         'color':  'red',
+#         'weight': 'normal',
+#         'size': 12,
+#         }
+# fontC = {'family': 'serif',
+#         'color':  'green',
+#         'weight': 'normal',
+#         'size': 12,
+#         }
+# fontD = {'family': 'serif',
+#         'color':  'magenta',
+#         'weight': 'normal',
+#         'size': 12,
+#         }
+# fontE = {'family': 'serif',
+#         'color':  'black',
+#         'weight': 'normal',
+#         'size': 12,
+#         }
 
-# FP1 = FlightProfile(3750, 30)
-# one = FP1.PlotMissionProfile(fig, ax, "red","Cruise Altitude Floor: ")
+# Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
+# Lilium7 = Aircraft("Lilium", 7, 186, 186, 16.3, 60, 1700, 187.8, S=10.7*1.7)
+# Archer5 = Aircraft("Archer", 5, 175, 60, 11.3, 24, 3175, 160, S=10.7*1.7)
+# Volocopter1 = Aircraft("Volocopter", 1, 70.6, 22, 2.5, 19, 900, 83.3, S=1.7*1.7)
+# EHang1 = Aircraft("Ehang", 1, 62, 22, 1.5, 21, 1322, 206.2, S=10.7*1.7)
+
+# FP1 = FlightProfile(Joby, 3800, 30)
+# FP2 = FlightProfile(Lilium7, 3000, 30)
+# FP3 = FlightProfile(Archer5, 4200, 30)
+# FP4 = FlightProfile(Volocopter1, 7000, 30)
+# FP5 = FlightProfile(EHang1, 7000, 30)
+
 # FP1_time = FP1.FlightTime()
 # E1 = FP1.EnergyConsumption()
+# FP2_time = FP2.FlightTime()
+# E2 = FP2.EnergyConsumption()
+# FP3_time = FP3.FlightTime()
+# E3 = FP3.EnergyConsumption()
+# FP4_time = FP4.FlightTime()
+# E4 = FP4.EnergyConsumption()
+# FP5_time = FP5.FlightTime()
+# E5 = FP5.EnergyConsumption()
+
+# fig, ax = plt.subplots(figsize = (8, 5),dpi=300)
+# one = FP1.PlotMissionProfile(fig, ax, "blue","Joby: Cruise Altitude Floor: ")
+# two = FP2.PlotMissionProfile(fig, ax, "red","Lilium: Cruise Altitude Floor: ")
+# three = FP3.PlotMissionProfile(fig, ax, "green","Archer: Cruise Altitude Floor: ")
+# # four = FP4.PlotMissionProfile(fig, ax, "magenta","Volocopter: Cruise Altitude Floor: ")
+# # five = FP5.PlotMissionProfile(fig, ax, "black","EHang: Cruise Altitude Floor: ")
+
+# plt.text(5, -3000, " Total Energy Consumed: " + str(round(E1))+" kWh", fontdict=fontA)
+# plt.text(5, -2500, " Total Flight Time: " + str(round(FP1_time))+" minutes", fontdict=fontA)
+
+# plt.text(5, -3000-1000, " Total Energy Consumed: " + str(round(E2))+" kWh", fontdict=fontB)
+# plt.text(5, -2500-1000, " Total Flight Time: " + str(round(FP2_time))+" minutes", fontdict=fontB)
+
+# plt.text(5, -3000-2000, " Total Energy Consumed: " + str(round(E3))+" kWh", fontdict=fontC)
+# plt.text(5, -2500-2000, " Total Flight Time: " + str(round(FP3_time))+" minutes", fontdict=fontC)
+
+# # plt.text(5, -3450-3000, " Total Energy Consumed: " + str(round(E4))+" kWh", fontdict=fontD)
+# # plt.text(5, -3150-3000, " Total Flight Time: " + str(round(FP4_time))+" minutes", fontdict=fontD)
+
+# # plt.text(5, -3450-4000, " Total Energy Consumed: " + str(round(E5))+" kWh", fontdict=fontE)
+# # plt.text(5, -3150-4000, " Total Flight Time: " + str(round(FP5_time))+" minutes", fontdict=fontE)
+
+# plt.legend(bbox_to_anchor=(0., -0.35), loc='lower left')
+# plt.show()
+
+### Disregard belwo
 # Joby = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 200, S=10.7*1.7)
 # print(Joby)
 # FP2 = FlightProfile(Joby, 1500, 30)
@@ -148,10 +212,7 @@ class FlightProfile:
 # plt.text(5, 1250, " Total Energy Consumed: " + str(round(E2))+" kWh", fontdict=font)
 # plt.text(5, 950, " Total Flight Time: " + str(round(FP2_time))+" minutes", fontdict=font)
 
-# plt.text(5, 3450, " Total Energy Consumed: " + str(round(E1))+" kWh", fontdict=font)
-# plt.text(5, 3150, " Total Flight Time: " + str(round(FP1_time))+" minutes", fontdict=font)
-# plt.legend()
-# plt.show()
+
 # X,Y = FP2.GivenRangeOutputAltitude(29)
 # print(Y  *  3.28084)
 # X,Y = FP2.GivenRangeOutputAltitude(20000)
