@@ -38,19 +38,20 @@ class Aircraft:
         print(f"Battery Capacity (kWh): {self.kWhBatt}")
         print(f"Wing Surface Area (m^2): {self.S}")
       
-    def ReachableGroundFootprint(self, altitude, mu_deg, PowFailure):
+    def ReachableGroundFootprint(self, altitude, speed, mu_deg, PowFailure):
         alt = altitude * 0.3048 # cruising altitude in meters
         self.rho = 1.225 # density of air in kg/m^3
         self.g = 9.81 # acceleration due to gravity in m/s^2
         g = self.g
-        speed = self.cruiseSpeed # cruising speed in mph
-        speed = speed * 0.44704 # converting mph to m/s 
+        speed = speed # in m/s # self.cruiseSpeed # cruising speed in mph
+        # speed = speed * 0.44704 # converting mph to m/s 
         W = self.MTOW * 9.81
         T = (1 - (PowFailure/100)) * W
         CD0 = 0.037
         k = 0.037
         
         # Define Heading Change angles from 0 deg to 270 degrees, with a condition to stop when radial angle is 180 degrees
+        # Note: this is only finding reachable footprint for half the circle; the other half is symmetric
         PSI = np.linspace(0, 3*math.pi/2, 100)
         
         """
@@ -72,7 +73,7 @@ class Aircraft:
                 mu_rad = self.degrees2radians(40)
             else:
                 mu_rad = self.degrees2radians(45)
-            # mu_rad = self.degrees2radians(mu_deg)
+            # mu_rad = self.degrees2radians(5)
             
             r = self.FindTurnRadius(speed, mu_rad) # radius of the turn
             Larc = self.FindTurnRadiusArcLength(r, HC)  # given change in heading, find arc length of the turn
@@ -80,7 +81,8 @@ class Aircraft:
             VsV = self.EstimateSinkRate(D)
             dH_turn = self.EstimateAltitudeLossDuringTurn(Larc, VsV, mu_rad)
             DGlide = (alt - dH_turn) * (self.LDratio)
-
+            self.VsV = VsV
+            
             if DGlide >= 0:
                 x = r * math.cos(math.pi - HC) + r
                 y = r * math.sin(math.pi - HC)                    
@@ -148,9 +150,15 @@ class Aircraft:
         
         # self.PlotReachabilityFootprint(X, Y)
         # self.PolarPlotReachabilityFootprint(ETA_final, np.multiply(1/1000,Distance))
+        X_wind, Y_wind = self.WindAnalysis(alt, speed, X, Y, 20, -90) # altitude, groundspeed, X, Y, wind speed, wind direction to North Pole
         
+        Distance_wind = [math.sqrt(X_wind[i] ** 2 + Y_wind[i] ** 2) for i in range(len(X_wind))]
+        
+        # plt.plot(X_wind,Y_wind)
+        # plt.show()
+        # plt.polar(np.multiply(1/1000,Distance), )
         # print(Distance)
-        return (X, Y, ETA_final, np.multiply(1/1000,Distance))
+        return (X_wind, Y_wind, ETA_final, np.multiply(1/1000,Distance_wind))
         
     def FindTurnRadius(self, speed, mu):
         r = speed ** 2 / (self.g * math.tan(mu)) # radius of the turn
@@ -165,10 +173,11 @@ class Aircraft:
         CD = CL/self.LDratio # Find CD from L/D ratio
         L = 0.5 * self.rho * speed ** 2 * self.S * CL * math.cos(mu)
         D = 0.5 * self.rho * speed**2 * self.S * CD
+        # print(L/D)
         return (L, D)
     
     def EstimateSinkRate(self, D):
-        return D/(self.MTOW*self.g)
+        return math.sin(math.atan(1/self.LDratio))#D/(self.MTOW*self.g)
     
     def EstimateAltitudeLossDuringTurn(self, Larc, VsV, mu):
         dH_turn = Larc * VsV / math.cos(mu) # height loss
@@ -230,7 +239,125 @@ class Aircraft:
         final_altitude = 3.28084 * final_altitude # meters to feet
         return (final_altitude)
 
+    def WindAnalysis(self, altitude, speed, X, Y, wind_speed, wind_direction):
+        Gmma = [] # the angle of the X, Y to the origin without wind
+        Vx_groundspeed = []
+        Vy_groundspeed = []
         
+        for i in range(len(X)):
+            # take care of divide 0 warning
+            if X[i] != 0:
+                gma_rad = math.atan(Y[i]/X[i])
+            elif Y[i] > 0 and X[i] == 0:
+                gma_rad = math.pi/2
+            elif Y[i] < 0 and X[i] == 0:
+                gma_rad = -math.pi/2
+            else:
+                gma_rad = 0
+            
+            # assign angles correctly based on the quadrant it is in
+            if Y[i] < 0 and X[i] < 0:
+                gma_rad = gma_rad - math.pi
+            elif Y[i] > 0 and X[i] < 0:
+                gma_rad = (gma_rad - math.pi)
+                
+            gma_deg = self.radians2degrees(gma_rad)
+            Gmma.append(gma_rad)    
+        
+            Vx = speed * math.cos(gma_rad)
+            Vy = speed * math.sin(gma_rad)
+            
+            Vx_groundspeed.append(Vx)
+            Vy_groundspeed.append(Vy)
+        
+        Gmma[-1] = -3*math.pi/2
+        # print(Gmma)
+        # plt.plot(Gmma)
+        # plt.show()
+        
+        wind_speed = wind_speed # wind speed in m/s
+        wind_direction = math.pi/2 - self.degrees2radians(wind_direction) # radians
+        wind_dir_xAxis = wind_speed*math.cos(wind_direction)
+        wind_dir_yAxis = wind_speed*math.sin(wind_direction)
+        
+        Vx_air = [vx + wind_dir_xAxis for vx in Vx_groundspeed]        
+        Vy_air = [vy + wind_dir_yAxis for vy in Vy_groundspeed]
+        
+        V_air_mag = [math.sqrt(Vx_air[i]**2 + Vy_air[i]**2) for i in range(len(Vx_air))]
+        
+        R_ground = [math.sqrt(X[i]**2 + Y[i]**2) for i in range(len(X))]
+        R_airspeed = [R_ground[i] * (V_air_mag[i] / speed) for i in range(len(X))]
+        
+        # find the angle between v ground speed and w wind speed
+        # law of cosines
+        
+        Angle_VW = [math.acos(-(V_air_mag[i]**2 - (speed**2 + wind_speed**2)) / (2*speed*wind_speed)) for i in range(len(X))]
+        Angle_Alt = [math.acos(-(wind_speed**2 - (speed**2 + V_air_mag[i]**2)) / (2*speed*V_air_mag[i])) for i in range(len(X))]
+        
+        delTA = []
+        for i in range(len(X)):
+            if Angle_VW[i] > Gmma[i]:
+                DelTa = Gmma[i] - Angle_Alt[i]
+            elif Angle_VW[i] < Gmma[i]:
+                DelTa = Gmma[i] + Angle_Alt[i]
+            else:
+                DelTa = Gmma[i]
+            
+            delTA.append(DelTa)
+        
+        # plt.plot(delTA)
+        # plt.show()
+            
+        # X_new = [R_airspeed[i]*math.cos(delTA[i]) for i in range(len(X))]
+        # Y_new = [R_airspeed[i]*math.sin(delTA[i]) for i in range(len(X))]
+        # print(X_new,Y_new)
+        # # plt.plot(Angle_VW)
+        # # plt.plot(Angle_Alt)
+        # # plt.show()
+        
+        # plt.plot(X_new, Y_new)
+        # plt.plot(X,Y)
+        # plt.show()
+        
+        # plt.plot(Vx_groundspeed, Vy_groundspeed, 'r')
+        # plt.plot(Vx_air, Vy_air, 'b')
+        # plt.show()
+        
+        
+        # another version
+        X_new = [X[i] + X[i]*((Vx_air[i] - Vx_groundspeed[i])/Vx_groundspeed[i]) for i in range(len(X))]
+        Y_new = [Y[i] + Y[i]*((Vy_air[i] - Vy_groundspeed[i])/Vy_groundspeed[i]) for i in range(len(Y))]
+        
+        # plt.plot(X_new, Y_new)
+        # plt.plot(X,Y)
+        # plt.show()
+
+        
+        """ Test Cases For Plotting and Checking (X, Y) and Wind Direction Vector """
+        # plt.plot(X,Y)
+        # plt.show()
+        # plt.plot([0, wind_speed*math.cos(wind_direction)], [0, wind_speed*math.sin(wind_direction)])
+        # plt.show()
+        """ End """
+        return (X_new,Y_new)
+        
+
+    
+# cruiseAlt = 1500 # cruising altitude in feet
+# POV = 1 # percentage of velocity
+# # velty_Joby = 0.44704*165*POV # m/s
+# # JobyS4 = Aircraft("Joby", 4, 165, 150, 13.8, 45, 2177, 254.4, S=10.7*1.7)
+# # JobyS4.Characteristics()
+# # X_JobyS4, Y_JobyS4, Radial_JobyS4, Distance_JobyS4 = JobyS4.ReachableGroundFootprint(cruiseAlt,velty_Joby,35,0)
+
+
+# velty_Lilium = 0.44704*175*POV # m/s
+# Lilium7 = Aircraft("Joby", 7, 175, 124, 16.3, 53, 3175, 305, S=11*1.1)
+# Lilium7.Characteristics()
+# X_Lilium7, Y_Lilium7, Radial_Lilium7, Distance_Lilium7 = Lilium7.ReachableGroundFootprint(cruiseAlt,velty_Lilium,35,0)
+
+
+
 # JobyS4 = Aircraft("Joby", 4, 200, 150, 13.8, 45, 2177, 254.4, S=10.7*1.7)
 # JobyS4.Characteristics()
 # """
